@@ -8,8 +8,9 @@
 
 - **100% Local Privacy:** No external APIs (like OpenAI or Claude) are used for resume parsing. Uses local `pdfplumber`, `tesseract`, and `scikit-learn` TF-IDF algorithms.
 - **Dual-Role Workflow:**
-  - **Admin Dashboard:** Create Jobs, set passing thresholds, and generate Candidate Magic Links.
+  - **Admin Dashboard:** Create and manage Jobs (Full CRUD), set passing thresholds, and generate Candidate Magic Links.
   - **Candidate Portal:** A beautifully crafted, glassmorphic UI where candidates upload their resumes and receive instant feedback.
+- **Application Registry:** A historical record of all processed resumes, scores, and application statuses, allowing recruiters to track historical performance and candidate data.
 - **Magic Link Security:** Single-use UUID links that grant candidates access to a specific job application without needing user accounts.
 - **Rust-Powered Database:** The `PlanDB` CLI wrapper provides lightning-fast SQLite schema management.
 - **Premium Frontend UI:** Built with React, Vite, Tailwind CSS (v4), and Framer Motion for a stunning, glassmorphism-inspired aesthetic.
@@ -80,14 +81,18 @@ cd ResumeReader
 
 **Scenario:** A tech company is urgently hiring for a **"Senior Python Backend Developer"** and wants to automatically filter out resumes that don't match the core requirements.
 
-### Step 1: Create the Job (Recruiter)
-
 1.  The recruiter opens the Admin Dashboard (`http://localhost:5173`).
-2.  Clicks **"Create New Job"**.
+2.  Clicks **"Create New Job"** or manages existing ones from the dashboard.
 3.  Enters the Job Title: `Senior Python Backend Developer`.
 4.  Pastes the Job Description (e.g., _"Looking for an expert in Python, FastAPI, SQL, Docker, and AWS..."_).
 5.  Sets the **Passing Threshold** to `65%`.
-6.  The system saves the job and generates a secure **Magic Link** (e.g., `http://localhost:5173/apply/8a7b6c5d...`).
+6.  The recruiter can also **Edit** the description later or **Delete** the job once filled.
+7.  The system saves the job and generates a secure **Magic Link** (e.g., `http://localhost:5173/apply/8a7b6c5d...`).
+
+### Step 1.5: Track History (Recruiter)
+
+1.  Recruiter clicks **"View Registry"** to see a full history of all resumes processed, regardless of whether they passed or failed.
+2.  Search through candidates by name, email, or position to find historical applicants.
 
 ### Step 2: Apply to the Job (Candidate)
 
