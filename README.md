@@ -12,7 +12,8 @@
   - **Candidate Portal:** A beautifully crafted, glassmorphic UI where candidates upload their resumes and receive instant feedback.
 - **Application Registry:** A historical record of all processed resumes, scores, and application statuses, allowing recruiters to track historical performance and candidate data.
 - **Magic Link Security:** Single-use UUID links that grant candidates access to a specific job application without needing user accounts.
-- **Rust-Powered Database:** The `PlanDB` CLI wrapper provides lightning-fast SQLite schema management.
+- **Cloud-Ready & Scalable:** Full support for **Neon PostgreSQL** and prepared for seamless deployment on **Blaxel.ai** via integrated Docker and agent manifests.
+- **Rust-Powered Database:** The `PlanDB` CLI wrapper provides lightning-fast SQLite schema management for local development.
 - **Premium Frontend UI:** Built with React, Vite, Tailwind CSS (v4), and Framer Motion for a stunning, glassmorphism-inspired aesthetic.
 
 ---
@@ -21,8 +22,8 @@
 
 The platform consists of three core components:
 
-1.  **Resume CLI (Rust):** A compiled Rust CLI (`resume_cli`) that initializes and manages the SQLite database (`resumereader.db`).
-2.  **Backend API (FastAPI / Python):** Handles magic link generation, secure routing, File I/O, OCR block parsing, and NLP Skill Matching algorithms.
+1.  **Resume CLI (Rust):** A compiled Rust CLI (`resume_cli`) that initializes and manages the SQLite database (`resumereader.db`) for local use.
+2.  **Backend API (FastAPI / Python):** Handles magic link generation, secure routing, File I/O, OCR block parsing, and NLP Skill Matching algorithms. Supports both SQLite and PostgreSQL (Neon).
 3.  **Frontend Web App (React / TypeScript):** A modern SPA that provides the interactive Dashboards and Application Portals.
 
 ---
@@ -39,11 +40,17 @@ The platform consists of three core components:
 
 ### 1. Database Setup
 
+#### Option A: Local SQLite (Fastest)
 ```bash
 cd resume_cli
 cargo build
 .\target\debug\resume_cli.exe init
 ```
+
+#### Option B: Cloud PostgreSQL (Neon)
+1.  Create a project on [Neon.tech](https://neon.tech).
+2.  Copy your `DATABASE_URL` to the `.env` file in the project root.
+3.  Run the initial migration found in `docs/migrations/001_initial_schema.sql` via the Neon SQL Editor.
 
 ### 2. Backend Setup
 
@@ -111,7 +118,7 @@ cd ResumeReader
 
 1.  Because `72%` > `65%`, the candidate sees the **Pass Screen** celebrating their match!
 2.  They are prompted to enter their Name and Email in the final application form.
-3.  The application is saved to the SQLite database.
+3.  The application is saved to the database (SQLite or Neon PostgreSQL).
 4.  _(If the candidate had scored 40%, they would have been gently rejected with a "Skill Gap" summary, saving the recruiter time)._
 
 ---
