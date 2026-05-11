@@ -1,7 +1,7 @@
 # Graph Report - C:\Users\xtrem\Downloads\python_proj\ResumeReader  (2026-05-11)
 
 ## Corpus Check
-- 26 files · ~7,551 words
+- 26 files · ~18,655 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
@@ -44,16 +44,16 @@
 10. `Job` - 6 edges
 
 ## Surprising Connections (you probably didn't know these)
-- `create_job()` --calls--> `Job`  [INFERRED]
-  C:\Users\xtrem\Downloads\python_proj\ResumeReader\backend\routers\jobs.py → C:\Users\xtrem\Downloads\python_proj\ResumeReader\backend\models.py
-- `create_job()` --calls--> `ShareToken`  [INFERRED]
-  C:\Users\xtrem\Downloads\python_proj\ResumeReader\backend\routers\jobs.py → C:\Users\xtrem\Downloads\python_proj\ResumeReader\backend\models.py
-- `Submit application form (only allowed if match passed).` --uses--> `MatchResult`  [INFERRED]
-  C:\Users\xtrem\Downloads\python_proj\ResumeReader\backend\routers\applications.py → C:\Users\xtrem\Downloads\python_proj\ResumeReader\backend\models.py
-- `Submit application form (only allowed if match passed).` --uses--> `Application`  [INFERRED]
-  C:\Users\xtrem\Downloads\python_proj\ResumeReader\backend\routers\applications.py → C:\Users\xtrem\Downloads\python_proj\ResumeReader\backend\models.py
-- `submit_application()` --calls--> `Application`  [INFERRED]
-  C:\Users\xtrem\Downloads\python_proj\ResumeReader\backend\routers\applications.py → C:\Users\xtrem\Downloads\python_proj\ResumeReader\backend\models.py
+- `Job` --calls--> `create_job()`  [INFERRED]
+  C:\Users\xtrem\Downloads\python_proj\ResumeReader\backend\models.py → C:\Users\xtrem\Downloads\python_proj\ResumeReader\backend\routers\jobs.py
+- `ShareToken` --calls--> `create_job()`  [INFERRED]
+  C:\Users\xtrem\Downloads\python_proj\ResumeReader\backend\models.py → C:\Users\xtrem\Downloads\python_proj\ResumeReader\backend\routers\jobs.py
+- `MatchResult` --uses--> `Submit application form (only allowed if match passed).`  [INFERRED]
+  C:\Users\xtrem\Downloads\python_proj\ResumeReader\backend\models.py → C:\Users\xtrem\Downloads\python_proj\ResumeReader\backend\routers\applications.py
+- `Application` --uses--> `Submit application form (only allowed if match passed).`  [INFERRED]
+  C:\Users\xtrem\Downloads\python_proj\ResumeReader\backend\models.py → C:\Users\xtrem\Downloads\python_proj\ResumeReader\backend\routers\applications.py
+- `Application` --calls--> `submit_application()`  [INFERRED]
+  C:\Users\xtrem\Downloads\python_proj\ResumeReader\backend\models.py → C:\Users\xtrem\Downloads\python_proj\ResumeReader\backend\routers\applications.py
 
 ## Communities
 

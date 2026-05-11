@@ -17,7 +17,7 @@
 ## 🛠️ Architecture
 
 The platform consists of three core components:
-1.  **PlanDB (Rust):** A compiled Rust CLI that initializes and manages the SQLite database (`resumereader.db`).
+1.  **Resume CLI (Rust):** A compiled Rust CLI (`resume_cli`) that initializes and manages the SQLite database (`resumereader.db`).
 2.  **Backend API (FastAPI / Python):** Handles magic link generation, secure routing, File I/O, OCR block parsing, and NLP Skill Matching algorithms.
 3.  **Frontend Web App (React / TypeScript):** A modern SPA that provides the interactive Dashboards and Application Portals.
 
@@ -34,9 +34,9 @@ The platform consists of three core components:
 
 ### 1. Database Setup
 ```bash
-cd plandb
+cd resume_cli
 cargo build
-.\target\debug\plandb.exe init
+.\target\debug\resume_cli.exe init
 ```
 
 ### 2. Backend Setup
