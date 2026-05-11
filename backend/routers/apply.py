@@ -70,6 +70,7 @@ async def upload_resume(token: str, file: UploadFile = File(...), db: Session = 
         structured_data=json.dumps(structured_data)
     )
     db.add(db_resume)
+    db.flush() # Ensure resume exists in DB before linking match_result
     
     # 5. Calculate Match Score
     match_result = calculate_match(
