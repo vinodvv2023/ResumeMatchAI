@@ -1,0 +1,96 @@
+from fastapi import APIRouter, Depends, HTTPException, status
+from sqlalchemy.orm import Session
+from typing import List
+import uuid
+import datetime
+
+from backend.database import get_db
+from backend.models import Job, ShareToken, MatchResult
+from backend.schemas import JobCreate, JobOut
+from backend.services.magic_link import generate_token, generate_magic_link, get_expiry
+from backend.config import PASS_THRESHOLD
+
+router = APIRouter(prefix="/jobs", tags=["Jobs"])
+
+@router.post("", response_model=JobOut)
+def create_job(job_in: JobCreate, db: Session = Depends(get_db)):
+    job_id = str(uuid.uuid4()).replace("-", "")
+    
+    # Create Job
+    db_job = Job(
+        id=job_id,
+        title=job_in.title,
+        description=job_in.description,
+        threshold=job_in.threshold
+    )
+    db.add(db_job)
+    
+    # Generate associated Magic Link Token
+    token_str = generate_token()
+    db_token = ShareToken(
+        token=token_str,
+        job_id=job_id,
+        expires_at=get_expiry()
+    )
+    db.add(db_token)
+    
+    db.commit()
+    db.refresh(db_job)
+    
+    # Return Job with Magic Link
+    return JobOut(
+        id=db_job.id,
+        title=db_job.title,
+        description=db_job.description,
+        threshold=db_job.threshold,
+        created_at=db_job.created_at,
+        token=token_str,
+        magic_link=generate_magic_link(token_str),
+        latest_score=None
+    )
+
+@router.get("", response_model=List[JobOut])
+def list_jobs(db: Session = Depends(get_db)):
+    jobs = db.query(Job).order_by(Job.created_at.desc()).all()
+    results = []
+    
+    for job in jobs:
+        # Get active token
+        token_obj = db.query(ShareToken).filter(
+            ShareToken.job_id == job.id, 
+            ShareToken.revoked == 0
+        ).order_by(ShareToken.created_at.desc()).first()
+        
+        # Get latest score
+        latest_match = db.query(MatchResult).filter(
+            MatchResult.job_id == job.id
+        ).order_by(MatchResult.created_at.desc()).first()
+        
+        out = JobOut.model_validate(job)
+        if token_obj:
+            out.token = token_obj.token
+            out.magic_link = generate_magic_link(token_obj.token)
+        if latest_match:
+            out.latest_score = latest_match.score
+            
+        results.append(out)
+        
+    return results
+
+@router.get("/{job_id}", response_model=JobOut)
+def get_job(job_id: str, db: Session = Depends(get_db)):
+    job = db.query(Job).filter(Job.id == job_id).first()
+    if not job:
+        raise HTTPException(status_code=404, detail="Job not found")
+        
+    token_obj = db.query(ShareToken).filter(
+        ShareToken.job_id == job.id, 
+        ShareToken.revoked == 0
+    ).order_by(ShareToken.created_at.desc()).first()
+    
+    out = JobOut.model_validate(job)
+    if token_obj:
+        out.token = token_obj.token
+        out.magic_link = generate_magic_link(token_obj.token)
+        
+    return out

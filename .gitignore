@@ -1,0 +1,10 @@
+.venv/
+.env
+resumereader.db
+resumereader.db-shm
+resumereader.db-wal
+__pycache__/
+*.pyc
+node_modules/
+dist/
+.DS_Store

@@ -1,0 +1,16 @@
+fastapi
+uvicorn[standard]
+sqlalchemy
+python-multipart
+aiofiles
+python-dotenv
+pdfplumber
+pdf2image
+pytesseract
+Pillow
+opencv-python
+python-docx
+striprtf
+scikit-learn
+spacy
+numpy
