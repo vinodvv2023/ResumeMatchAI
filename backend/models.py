@@ -38,7 +38,7 @@ class MatchResult(Base):
     __tablename__ = "match_results"
 
     id             = Column(String, primary_key=True)
-    job_id         = Column(String, ForeignKey("jobs.id"), nullable=False)
+    job_id         = Column(String, ForeignKey("jobs.id", ondelete="CASCADE"), nullable=False)
     resume_id      = Column(String, ForeignKey("resumes.id"), nullable=False)
     score          = Column(Integer, nullable=False)
     matched_skills = Column(Text, nullable=True)    # JSON array
@@ -52,7 +52,7 @@ class Application(Base):
     __tablename__ = "applications"
 
     id           = Column(String, primary_key=True)
-    match_id     = Column(String, ForeignKey("match_results.id"), nullable=False)
+    match_id     = Column(String, ForeignKey("match_results.id", ondelete="CASCADE"), nullable=False)
     name         = Column(String, nullable=False)
     email        = Column(String, nullable=False)
     phone        = Column(String, nullable=True)

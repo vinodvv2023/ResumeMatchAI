@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Plus, Copy, CheckCircle2, ExternalLink } from 'lucide-react';
+import { Plus, Copy, CheckCircle2, ExternalLink, Pencil, Trash2, History } from 'lucide-react';
 import api from '../lib/api';
 import type { Job } from '../types';
 
@@ -30,6 +30,18 @@ export default function Dashboard() {
     setTimeout(() => setCopied(null), 2000);
   };
 
+  const handleDelete = async (id: string) => {
+    if (!window.confirm('Are you sure you want to delete this job? All associated data will be lost.')) return;
+    
+    try {
+      await api.delete(`/jobs/${id}`);
+      setJobs(jobs.filter(j => j.id !== id));
+    } catch (error) {
+      console.error('Failed to delete job', error);
+      alert('Failed to delete job');
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-[60vh]">
@@ -47,10 +59,16 @@ export default function Dashboard() {
           </h1>
           <p className="text-slate-400 mt-2">Manage open positions and application links</p>
         </div>
-        <Link to="/create-job" className="glass-button flex items-center gap-2">
-          <Plus size={20} />
-          Create New Job
-        </Link>
+        <div className="flex gap-4">
+          <Link to="/registry" className="glass-button !bg-slate-800/50 flex items-center gap-2">
+            <History size={20} />
+            View Registry
+          </Link>
+          <Link to="/create-job" className="glass-button flex items-center gap-2">
+            <Plus size={20} />
+            Create New Job
+          </Link>
+        </div>
       </div>
 
       <div className="glass-card overflow-hidden !p-0">
@@ -61,13 +79,13 @@ export default function Dashboard() {
                 <th className="p-4 font-semibold text-slate-300">Job Title</th>
                 <th className="p-4 font-semibold text-slate-300">Threshold</th>
                 <th className="p-4 font-semibold text-slate-300">Latest Score</th>
-                <th className="p-4 font-semibold text-slate-300">Magic Link</th>
+                <th className="p-4 font-semibold text-slate-300 text-right">Actions</th>
               </tr>
             </thead>
             <tbody>
               {jobs.length === 0 ? (
                 <tr>
-                  <td colSpan={4} className="p-8 text-center text-slate-400">
+                  <td colSpan={5} className="p-8 text-center text-slate-400">
                     No jobs created yet. Click "Create New Job" to get started.
                   </td>
                 </tr>
@@ -122,6 +140,24 @@ export default function Dashboard() {
                       ) : (
                         <span className="text-red-400 text-sm">No active link</span>
                       )}
+                    </td>
+                    <td className="p-4 text-right">
+                      <div className="flex items-center justify-end gap-2">
+                        <Link 
+                          to={`/edit-job/${job.id}`}
+                          className="p-2 hover:bg-violet-500/20 rounded-md transition-colors text-violet-400 hover:text-violet-300"
+                          title="Edit Job"
+                        >
+                          <Pencil size={18} />
+                        </Link>
+                        <button 
+                          onClick={() => handleDelete(job.id)}
+                          className="p-2 hover:bg-red-500/20 rounded-md transition-colors text-red-400 hover:text-red-300"
+                          title="Delete Job"
+                        >
+                          <Trash2 size={18} />
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))

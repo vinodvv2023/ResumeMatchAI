@@ -10,6 +10,12 @@ class JobCreate(BaseModel):
     threshold:   int = Field(default=60, ge=0, le=100)
 
 
+class JobUpdate(BaseModel):
+    title:       Optional[str] = Field(None, min_length=3, max_length=200)
+    description: Optional[str] = Field(None, min_length=20)
+    threshold:   Optional[int] = Field(None, ge=0, le=100)
+
+
 class JobOut(BaseModel):
     id:          str
     title:       str
@@ -67,6 +73,18 @@ class ApplicationOut(BaseModel):
     submitted_at: str
 
     model_config = {"from_attributes": True}
+
+
+class RegistryEntry(BaseModel):
+    id:           str
+    job_title:    str
+    candidate_name: str
+    email:        Optional[str] = None
+    score:        int
+    passed:       bool
+    created_at:   str
+    match_id:     str
+    has_applied:  bool
 
 
 # ── Admin Stats ──────────────────────────────────────────────────────────────

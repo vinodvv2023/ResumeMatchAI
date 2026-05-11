@@ -36,3 +36,15 @@ export interface Application {
   portfolio?: string;
   submitted_at: string;
 }
+
+export interface RegistryEntry {
+  id: string;
+  job_title: string;
+  candidate_name: string;
+  email?: string;
+  score: number;
+  passed: boolean;
+  created_at: string;
+  match_id: string;
+  has_applied: boolean;
+}
