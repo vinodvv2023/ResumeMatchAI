@@ -14,3 +14,4 @@ striprtf
 scikit-learn
 spacy
 numpy
+psycopg2-binary

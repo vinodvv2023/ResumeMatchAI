@@ -27,3 +27,10 @@ app.include_router(applications.router)
 @app.get("/health")
 def health_check():
     return {"status": "ok", "service": "resumereader-api"}
+
+if __name__ == "__main__":
+    import uvicorn
+    # Blaxel and other cloud providers inject HOST and PORT
+    host = os.getenv("HOST", "0.0.0.0")
+    port = int(os.getenv("PORT", 8000))
+    uvicorn.run(app, host=host, port=port)

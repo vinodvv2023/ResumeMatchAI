@@ -1,0 +1,9 @@
+name = "resumereader-api"
+type = "agent"
+
+[runtime]
+dockerfile = "Dockerfile"
+# Blaxel will automatically inject HOST and PORT
+# We can also specify environment variables here if needed
+# [runtime.envs]
+# DATABASE_URL = "your-neon-url-here"

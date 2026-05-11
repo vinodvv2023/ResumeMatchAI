@@ -5,7 +5,7 @@ import os
 load_dotenv()
 
 DATABASE_PATH = os.getenv("DATABASE_PATH", "resumereader.db")
-DATABASE_URL  = f"sqlite:///{DATABASE_PATH}"
+DATABASE_URL  = os.getenv("DATABASE_URL", f"sqlite:///{DATABASE_PATH}")
 
 BASE_URL          = os.getenv("BASE_URL", "http://localhost:8000")
 FRONTEND_URL      = os.getenv("FRONTEND_URL", "http://localhost:5173")
