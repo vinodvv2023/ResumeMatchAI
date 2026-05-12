@@ -4,14 +4,14 @@ FROM python:3.11-slim
 # Set environment variables
 ENV PYTHONDONTWRITEBYTECODE 1
 ENV PYTHONUNBUFFERED 1
-ENV PORT 8000
+ENV PORT 8080
 ENV HOST 0.0.0.0
 
 # Install system dependencies for OCR and PDF processing
 RUN apt-get update && apt-get install -y --no-install-recommends \
     tesseract-ocr \
     poppler-utils \
-    libgl1-mesa-glx \
+    libgl1 \
     libglib2.0-0 \
     gcc \
     python3-dev \
@@ -33,7 +33,7 @@ COPY backend/ ./backend/
 RUN mkdir -p uploads
 
 # Expose the port
-EXPOSE 8000
+EXPOSE 8080
 
-# Run the application
-CMD ["python", "-m", "backend.main"]
+# Run the application using uvicorn with debug logging
+CMD ["uvicorn", "backend.main:app", "--host", "0.0.0.0", "--port", "8080", "--log-level", "debug"]

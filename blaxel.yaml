@@ -1,0 +1,23 @@
+apiVersion: blaxel.ai/v1alpha1
+kind: Agent
+metadata:
+  name: resumereader-api
+spec:
+  runtime:
+    dockerfile: Dockerfile
+    # Blaxel will automatically inject PORT=8080 from the Dockerfile EXPOSE
+    resources:
+      cpu: 1
+      memory: 2048
+    maxScale: 1
+    minScale: 0
+    ports:
+      - name: http
+        port: 8080
+        protocol: http
+  # These are placeholders; they will be filled by the secrets you pass in the CLI
+  envs:
+    - name: AGENT_DEEPINFRA_MODEL
+      value: "deepseek-ai/DeepSeek-V3"
+    - name: FRONTEND_URL
+      value: "https://your-frontend-url.vercel.app"
