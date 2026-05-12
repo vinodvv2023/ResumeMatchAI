@@ -1,5 +1,5 @@
 name = "resumereader-api"
-type = "agent"
+type = "sandbox"
 
 [runtime]
 dockerfile = "Dockerfile"

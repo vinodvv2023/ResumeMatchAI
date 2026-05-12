@@ -1,5 +1,5 @@
 apiVersion: blaxel.ai/v1alpha1
-kind: Agent
+kind: Sandbox
 metadata:
   name: resumereader-api
 spec:
