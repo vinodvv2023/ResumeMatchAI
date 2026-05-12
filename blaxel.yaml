@@ -13,7 +13,7 @@ spec:
     minScale: 0
     ports:
       - name: http
-        port: 8080
+        target: 8080
         protocol: http
   # These are placeholders; they will be filled by the secrets you pass in the CLI
   envs:

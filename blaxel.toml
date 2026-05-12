@@ -8,5 +8,5 @@ maxScale = 1
 
 [[runtime.ports]]
 name = "http"
-port = 8080
+target = 8080
 protocol = "http"
