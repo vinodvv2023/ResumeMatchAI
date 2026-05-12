@@ -1,3 +1,6 @@
+# Pull the Blaxel sandbox-api binary required for sandbox deployments
+FROM ghcr.io/blaxel-ai/sandbox:latest AS sandbox-api
+
 # Use Python 3.11 slim image
 FROM python:3.11-slim
 
@@ -21,6 +24,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 # Set work directory
 WORKDIR /app
+
+# Copy the Blaxel sandbox-api binary
+COPY --from=sandbox-api /sandbox-api /usr/local/bin/sandbox-api
 
 # Install Python dependencies
 COPY requirements.txt .
