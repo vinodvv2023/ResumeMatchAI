@@ -87,8 +87,7 @@ async def upload_resume(token: str, file: UploadFile = File(...), db: Session = 
     # 5. Calculate Match Score
     match_result = calculate_match(
         job_description=job.description,
-        resume_raw_text=blocks.get("raw_text", ""),
-        resume_skills=structured_data.get("skills", []),
+        sections=blocks,
         contact_info=structured_data.get("contact", {})
     )
     

@@ -302,9 +302,9 @@ def _parse_contact(lines: list[str], raw: str, extra_links: list[str] = None) ->
                         final_name = cand
                         break
 
-    if final_name:
-        contact["name"] = final_name
-
+    # We no longer pre-fill the name field as per user request
+    # contact["name"] = final_name 
+    
     return contact
 
 

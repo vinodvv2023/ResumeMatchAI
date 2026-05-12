@@ -1,12 +1,21 @@
 # ResumeMatch AI 🚀
 
-**The Recruiter's Edge:** When you post job requirements, you often get hundreds of resumes that must be screened manually—a time-consuming and exhausting process. Most candidates don't match the job description.
+**The Recruiter's Edge:** What happens when you make job posting on LinkedIn. You close comments to avoid comments similar to "I am interested" or "I want to apply". That's just the tip of the iceberg. When you post job requirements, you often get hundreds of resumes that must be screened manually, a time-consuming and exhausting process. Most candidates don't match the job description. That's where ResumeMatch AI comes in.
 
-**ResumeMatch AI** is a premium, privacy-first resume screening platform. It empowers recruiters with a stunning glassmorphic dashboard to manage jobs and distribute secure "Magic Link" portals to candidates. When candidates apply, the platform uses a hybrid AI engine (Local OCR + DeepSeek-V3) to instantly extract skills, match them against the Job Description, and determine if they pass the threshold—all while strictly protecting candidate privacy through local PII redaction.
+**ResumeMatch AI** is a premium, privacy-first resume screening platform. It empowers recruiters with a stunning glassmorphic dashboard to manage jobs and distribute secure "Magic Link" portals to candidates. The "Magic link" is posted on your job listing where candidates can click to open up ResumeMatch AI portal to apply. Once the candidate clicks on the link, the platform uses a hybrid AI engine (Local OCR + DeepSeek-V3) to instantly extract skills, match them against the Job Description, and determine if they pass the threshold. It also strictly protects candidate privacy through local PII redaction.
+
+![Recruiter Dashboard](./docs/images/dashboard.png)
+_Modern Recruiter Dashboard with Job Management_
+
+![Candidate Portal](./docs/images/apply_gate.png)
+_AI-Powered Candidate Portal with Instant Analysis_
+
+![Application Registry](./docs/images/registry.png)
+_Application Registry with Detailed Match Insights_
 
 ## 🌟 Key Features
 
-- **Privacy-First AI Matching:** Uses **DeepSeek-V3** (via DeepInfra) for intelligent, context-aware matching. **Crucially**, all PII (Name, Email, Phone, Social Links) is redacted locally *before* being sent to the AI, ensuring personal data never leaves your server.
+- **Privacy-First AI Matching:** Uses **DeepSeek-V3** (via DeepInfra) for intelligent, context-aware matching. **Crucially**, all PII (Name, Email, Phone, Social Links) is redacted locally _before_ being sent to the AI, ensuring personal data never leaves your server.
 - **Smart Pre-filling:** Automatically extracts candidate details and portfolio links (GitHub, LinkedIn, Behance) from PDFs (including "hidden" icon links) to pre-fill the application form.
 - **Dual-Role Workflow:**
   - **Admin Dashboard:** Full CRUD for Jobs, passing thresholds, and Magic Link generation.
@@ -30,15 +39,19 @@
 ## 📦 Installation
 
 ### Prerequisites
+
 - Python 3.10+, Node.js 18+, Rust
 - Tesseract OCR & Poppler (for PDF parsing)
 
 ### 1. Database Setup
+
 - **Local SQLite:** Run `cd resume_cli && cargo run -- init`.
 - **Neon PostgreSQL:** Update `DATABASE_URL` in `.env` and run migrations from `docs/migrations/`.
 
 ### 2. Environment Configuration
+
 Create a `.env` file with:
+
 ```env
 DEEPINFRA_API_TOKEN=your_token
 AGENT_DEEPINFRA_MODEL=deepseek-ai/DeepSeek-V3
@@ -46,7 +59,9 @@ DATABASE_URL=... (optional)
 ```
 
 ### 3. Startup
+
 Use the `start.bat` in the root directory:
+
 ```bash
 .\start.bat
 ```
@@ -68,4 +83,5 @@ Use the `start.bat` in the root directory:
 ---
 
 ## 📝 License
+
 Released under Apache License 2.0. Modify and distribute as needed.
