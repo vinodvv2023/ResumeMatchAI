@@ -32,6 +32,7 @@ def validate_token(token: str, db: Session = Depends(get_db)):
         
     return TokenInfo(
         job_title=job.title if job else "Unknown Job",
+        job_description=job.description if job else "",
         job_id=job.id if job else "",
         valid=is_valid,
         expired=expired,
@@ -50,22 +51,33 @@ async def upload_resume(token: str, file: UploadFile = File(...), db: Session = 
     if not job:
         raise HTTPException(status_code=404, detail="Job not found")
 
-    # 2. Read File
-    file_bytes = await file.read()
+    # 2. Save File to Disk
+    import shutil
+    upload_dir = "backend/uploads/resumes"
+    os.makedirs(upload_dir, exist_ok=True)
     
+    resume_id = str(uuid.uuid4()).replace("-", "")
+    file_path = f"{upload_dir}/{resume_id}_{file.filename}"
+    
+    with open(file_path, "wb") as buffer:
+        file.file.seek(0)
+        shutil.copyfileobj(file.file, buffer)
+
     # 3. Parse and Extract
     try:
+        file.file.seek(0)
+        file_bytes = await file.read()
         blocks = parse_file(file_bytes, file.filename or "unknown.pdf")
         structured_data = extract_structured(blocks)
     except Exception as e:
         raise HTTPException(status_code=400, detail=f"Error parsing file: {str(e)}")
         
     # 4. Save Resume to DB
-    resume_id = str(uuid.uuid4()).replace("-", "")
     db_resume = Resume(
         id=resume_id,
         token=token,
         filename=file.filename,
+        file_path=file_path,
         raw_text=blocks.get("raw_text", ""),
         structured_data=json.dumps(structured_data)
     )
@@ -76,7 +88,8 @@ async def upload_resume(token: str, file: UploadFile = File(...), db: Session = 
     match_result = calculate_match(
         job_description=job.description,
         resume_raw_text=blocks.get("raw_text", ""),
-        resume_skills=structured_data.get("skills", [])
+        resume_skills=structured_data.get("skills", []),
+        contact_info=structured_data.get("contact", {})
     )
     
     passed = match_result["score"] >= job.threshold
@@ -103,5 +116,6 @@ async def upload_resume(token: str, file: UploadFile = File(...), db: Session = 
         passed=passed,
         matched_skills=match_result["matched_skills"],
         missing_skills=match_result["missing_skills"],
-        summary=match_result["summary"]
+        summary=match_result["summary"],
+        extracted_data=structured_data.get("contact", {})
     )

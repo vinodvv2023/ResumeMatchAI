@@ -29,6 +29,7 @@ class Resume(Base):
     id              = Column(String, primary_key=True)
     token           = Column(String, ForeignKey("share_tokens.token"), nullable=False)
     filename        = Column(String, nullable=True)
+    file_path       = Column(String, nullable=True)
     raw_text        = Column(Text, nullable=True)
     structured_data = Column(Text, nullable=True)   # JSON
     uploaded_at     = Column(String, nullable=False, default=lambda: datetime.utcnow().isoformat())
@@ -58,4 +59,5 @@ class Application(Base):
     phone        = Column(String, nullable=True)
     linkedin     = Column(String, nullable=True)
     portfolio    = Column(String, nullable=True)
+    cover_letter = Column(Text, nullable=True)
     submitted_at = Column(String, nullable=False, default=lambda: datetime.utcnow().isoformat())

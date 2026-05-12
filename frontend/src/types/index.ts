@@ -11,6 +11,7 @@ export interface Job {
 
 export interface TokenInfo {
   job_title: string;
+  job_description: string;
   job_id: string;
   valid: boolean;
   expired: boolean;
@@ -24,6 +25,13 @@ export interface MatchResult {
   matched_skills: string[];
   missing_skills: string[];
   summary: string;
+  extracted_data?: {
+    name?: string;
+    email?: string;
+    phone?: string;
+    linkedin?: string;
+    portfolio?: string;
+  };
 }
 
 export interface Application {
@@ -34,6 +42,7 @@ export interface Application {
   phone?: string;
   linkedin?: string;
   portfolio?: string;
+  cover_letter?: string;
   submitted_at: string;
 }
 
@@ -47,4 +56,8 @@ export interface RegistryEntry {
   created_at: string;
   match_id: string;
   has_applied: boolean;
+  resume_text?: string;
+  cover_letter?: string;
+  resume_id?: string;
+  filename?: string;
 }

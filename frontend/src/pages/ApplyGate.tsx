@@ -15,7 +15,7 @@ export default function ApplyGate() {
   const [error, setError] = useState<string | null>(null);
 
   // App form state
-  const [appForm, setAppForm] = useState({ name: '', email: '', phone: '', linkedin: '', portfolio: '' });
+  const [appForm, setAppForm] = useState({ name: '', email: '', phone: '', linkedin: '', portfolio: '', cover_letter: '' });
   const [appSubmitting, setAppSubmitting] = useState(false);
   const [appSuccess, setAppSuccess] = useState(false);
 
@@ -36,6 +36,24 @@ export default function ApplyGate() {
     if (token) validateToken();
   }, [token]);
 
+  const normalizeUrl = (url: string | undefined): string => {
+    if (!url) return '';
+    let trimmed = url.trim();
+    if (!trimmed) return '';
+    
+    // Prepend https:// if missing
+    if (!/^https?:\/\//i.test(trimmed)) {
+      trimmed = `https://${trimmed}`;
+    }
+    
+    try {
+      new URL(trimmed);
+      return trimmed;
+    } catch {
+      return ''; // Invalid URL
+    }
+  };
+
   const handleUpload = async () => {
     if (!file || !token) return;
     
@@ -50,6 +68,19 @@ export default function ApplyGate() {
         headers: { 'Content-Type': 'multipart/form-data' }
       });
       setResult(response.data);
+      
+      // Auto-prefill form from extracted data
+      if (response.data.extracted_data) {
+        setAppForm(prev => ({
+          ...prev,
+          name: response.data.extracted_data?.name || prev.name,
+          email: response.data.extracted_data?.email || prev.email,
+          phone: response.data.extracted_data?.phone || prev.phone,
+          linkedin: normalizeUrl(response.data.extracted_data?.linkedin) || prev.linkedin,
+          portfolio: normalizeUrl(response.data.extracted_data?.portfolio) || prev.portfolio,
+        }));
+      }
+
       setStep(response.data.passed ? 'pass' : 'fail');
     } catch (err: any) {
       setError(err.response?.data?.detail || 'Failed to process resume');
@@ -101,7 +132,7 @@ export default function ApplyGate() {
       {/* Header */}
       <div className="text-center mb-12">
         <h1 className="text-4xl font-bold text-white mb-3">Apply for {jobInfo?.job_title}</h1>
-        <p className="text-slate-400">Powered by ResumeReader AI</p>
+        <p className="text-slate-400">Powered by ResumeMatch AI</p>
       </div>
 
       <AnimatePresence mode="wait">
@@ -123,32 +154,45 @@ export default function ApplyGate() {
 
         {/* Step 2: Upload */}
         {step === 'upload' && (
-          <motion.div key="upload" variants={containerVariants} initial="hidden" animate="visible" exit="exit" className="glass-card max-w-xl mx-auto p-8">
-            <h2 className="text-2xl font-bold text-white mb-6 text-center">Upload Your Resume</h2>
-            
-            {error && <div className="bg-red-500/10 text-red-400 p-4 rounded-xl mb-6">{error}</div>}
+          <motion.div key="upload" variants={containerVariants} initial="hidden" animate="visible" exit="exit" className="max-w-5xl mx-auto">
+            <div className="grid md:grid-cols-2 gap-8">
+              {/* Left Side: Job Description */}
+              <div className="glass-card p-8 h-full flex flex-col">
+                <h2 className="text-xl font-bold text-white mb-4 border-b border-white/10 pb-2">Job Description</h2>
+                <div className="text-slate-300 text-sm leading-relaxed whitespace-pre-wrap overflow-y-auto max-h-[400px] pr-2 custom-scrollbar">
+                  {jobInfo?.job_description}
+                </div>
+              </div>
 
-            <div className="border-2 border-dashed border-white/20 rounded-2xl p-10 text-center hover:bg-white/5 transition-colors cursor-pointer relative group">
-              <input 
-                type="file" 
-                className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-                accept=".pdf,.docx,.doc,.rtf,.txt"
-                onChange={(e) => e.target.files && setFile(e.target.files[0])}
-              />
-              <FileUp className="w-16 h-16 text-violet-400 mx-auto mb-4 group-hover:scale-110 transition-transform" />
-              <p className="text-lg font-medium text-white mb-1">
-                {file ? file.name : "Click or drag file here"}
-              </p>
-              <p className="text-sm text-slate-400">PDF, DOCX, RTF, TXT (Max 10MB)</p>
+              {/* Right Side: Upload */}
+              <div className="glass-card p-8 h-full flex flex-col">
+                <h2 className="text-xl font-bold text-white mb-6">Upload Your Resume</h2>
+                
+                {error && <div className="bg-red-500/10 text-red-400 p-4 rounded-xl mb-6">{error}</div>}
+
+                <div className="flex-1 border-2 border-dashed border-white/20 rounded-2xl p-6 text-center hover:bg-white/5 transition-colors cursor-pointer relative group flex flex-col items-center justify-center min-h-[200px]">
+                  <input 
+                    type="file" 
+                    className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                    accept=".pdf,.docx,.doc,.rtf,.txt"
+                    onChange={(e) => e.target.files && setFile(e.target.files[0])}
+                  />
+                  <FileUp className="w-12 h-12 text-violet-400 mb-4 group-hover:scale-110 transition-transform" />
+                  <p className="text-base font-medium text-white mb-1">
+                    {file ? file.name : "Click or drag file here"}
+                  </p>
+                  <p className="text-xs text-slate-400">PDF, DOCX, RTF, TXT (Max 10MB)</p>
+                </div>
+
+                <button 
+                  onClick={handleUpload} 
+                  disabled={!file} 
+                  className="glass-button w-full mt-6"
+                >
+                  Analyze Resume
+                </button>
+              </div>
             </div>
-
-            <button 
-              onClick={handleUpload} 
-              disabled={!file} 
-              className="glass-button w-full mt-8"
-            >
-              Analyze Resume
-            </button>
           </motion.div>
         )}
 
@@ -246,6 +290,15 @@ export default function ApplyGate() {
                     <div>
                       <label className="block text-sm font-medium text-slate-300 mb-1">Portfolio URL</label>
                       <input type="url" className="glass-input w-full" value={appForm.portfolio} onChange={e => setAppForm({...appForm, portfolio: e.target.value})} />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-slate-300 mb-1">Covering Letter</label>
+                      <textarea 
+                        className="glass-input w-full min-h-[120px] py-3" 
+                        placeholder="Tell us why you are a great fit..."
+                        value={appForm.cover_letter} 
+                        onChange={e => setAppForm({...appForm, cover_letter: e.target.value})} 
+                      />
                     </div>
 
                     <button type="submit" disabled={appSubmitting} className="glass-button w-full mt-4 flex items-center justify-center">

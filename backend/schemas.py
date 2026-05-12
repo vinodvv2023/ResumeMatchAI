@@ -33,11 +33,12 @@ class JobOut(BaseModel):
 
 class TokenInfo(BaseModel):
     """Returned when candidate opens magic link — minimal info only."""
-    job_title:   str
-    job_id:      str
-    valid:       bool
-    expired:     bool = False
-    revoked:     bool = False
+    job_title:       str
+    job_description: str
+    job_id:          str
+    valid:           bool
+    expired:         bool = False
+    revoked:         bool = False
 
 
 # ── Match Result ─────────────────────────────────────────────────────────────
@@ -49,6 +50,7 @@ class MatchOut(BaseModel):
     matched_skills: List[str]
     missing_skills: List[str]
     summary:        str
+    extracted_data: Optional[dict] = None
 
 
 # ── Candidate Application Form ───────────────────────────────────────────────
@@ -60,6 +62,7 @@ class ApplicationCreate(BaseModel):
     phone:     Optional[str] = None
     linkedin:  Optional[str] = None
     portfolio: Optional[str] = None
+    cover_letter: Optional[str] = None
 
 
 class ApplicationOut(BaseModel):
@@ -70,6 +73,7 @@ class ApplicationOut(BaseModel):
     phone:        Optional[str]
     linkedin:     Optional[str]
     portfolio:    Optional[str]
+    cover_letter: Optional[str]
     submitted_at: str
 
     model_config = {"from_attributes": True}
@@ -85,6 +89,10 @@ class RegistryEntry(BaseModel):
     created_at:   str
     match_id:     str
     has_applied:  bool
+    resume_text:  Optional[str] = None
+    cover_letter: Optional[str] = None
+    resume_id:    Optional[str] = None
+    filename:     Optional[str] = None
 
 
 # ── Admin Stats ──────────────────────────────────────────────────────────────
@@ -99,3 +107,7 @@ class StatsOut(BaseModel):
     pass_rate:      Optional[float]
     avg_score:      Optional[float]
     total_applications: int
+
+
+class BulkDelete(BaseModel):
+    ids: List[str]

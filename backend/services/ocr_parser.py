@@ -103,9 +103,18 @@ def parse_file(file_bytes: bytes, filename: str) -> dict[str, Any]:
 def _parse_pdf(file_bytes: bytes) -> dict[str, Any]:
     import pdfplumber
 
+    links = []
     try:
         with pdfplumber.open(io.BytesIO(file_bytes)) as pdf:
             pages_text = [p.extract_text() or "" for p in pdf.pages]
+            
+            # Extract hyperlinks (annots)
+            for page in pdf.pages:
+                if page.annots:
+                    for annot in page.annots:
+                        if annot.get("uri"):
+                            links.append(annot["uri"])
+                            
         text = "\n".join(pages_text).strip()
 
         # If very little text was extracted, fall back to OCR
@@ -116,7 +125,7 @@ def _parse_pdf(file_bytes: bytes) -> dict[str, Any]:
         logger.warning("pdfplumber failed (%s), trying OCR", exc)
         text = _pdf_ocr(file_bytes)
 
-    return _build_blocks(text)
+    return _build_blocks(text, links)
 
 
 def _pdf_ocr(file_bytes: bytes) -> str:
@@ -196,12 +205,15 @@ def _parse_txt(file_bytes: bytes) -> dict[str, Any]:
 
 # ── Block Detector ───────────────────────────────────────────────────────────
 
-def _build_blocks(raw_text: str) -> dict[str, Any]:
+def _build_blocks(raw_text: str, links: list[str] = None) -> dict[str, Any]:
     """
     Detect section headers in raw_text and group lines under each section.
     Returns a structured dict with known sections + raw_text.
     """
     blocks = _empty_blocks(raw_text)
+    if links:
+        blocks["links"] = links
+    
     current_section = "summary"   # assume text before first header = summary
     current_lines: list[str] = []
 
@@ -234,6 +246,7 @@ def _empty_blocks(raw_text: str) -> dict[str, Any]:
     return {
         "raw_text": raw_text,
         "contact": [],
+        "links": [],
         "summary": [],
         "skills": [],
         "experience": [],

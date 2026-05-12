@@ -7,25 +7,45 @@ cosine similarity on extracted skills.
 
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
-from backend.services.extractor import extract_skills_from_text
+from backend.services.extractor import extract_skills_from_text, redact_pii
+from backend.services.llm import get_llm_analysis
 
 
-def calculate_match(job_description: str, resume_raw_text: str, resume_skills: list[str]) -> dict:
+def calculate_match(job_description: str, resume_raw_text: str, resume_skills: list[str], contact_info: dict[str, str] = None) -> dict:
     """
     Returns a score from 0-100, and lists of matched/missing skills.
+    First tries LLM, then falls back to TF-IDF logic.
     """
-    # 1. Extract required skills from Job Description
+    
+    # 1. Try LLM Analysis first
+    # Redact PII to protect privacy before sending to LLM
+    redacted_resume = resume_raw_text
+    if contact_info:
+        redacted_resume = redact_pii(resume_raw_text, contact_info)
+    
+    llm_result = get_llm_analysis(job_description, redacted_resume)
+    if llm_result:
+        return {
+            "score": llm_result.get("score", 0),
+            "matched_skills": llm_result.get("matched_skills", []),
+            "missing_skills": llm_result.get("missing_skills", []),
+            "summary": llm_result.get("summary", "Analysis completed by AI.")
+        }
+
+    # 2. Fallback to existing Logic (no LLM)
+    # -------------------------------------
+    
+    # Extract required skills from Job Description
     required_skills = extract_skills_from_text(job_description)
     
-    # 2. Find overlap
+    # Find overlap
     candidate_skills_set = set(resume_skills)
     required_skills_set = set(required_skills)
     
     matched_skills = list(required_skills_set & candidate_skills_set)
     missing_skills = list(required_skills_set - candidate_skills_set)
     
-    # 3. Calculate TF-IDF Cosine Similarity for overall text match
-    # We compare the JD text with the full raw text of the resume
+    # Calculate TF-IDF Cosine Similarity for overall text match
     documents = [job_description.lower(), resume_raw_text.lower()]
     
     try:
@@ -34,16 +54,17 @@ def calculate_match(job_description: str, resume_raw_text: str, resume_skills: l
         cosine_sim = cosine_similarity(tfidf_matrix[0:1], tfidf_matrix[1:2])[0][0]
         text_score = int(cosine_sim * 100)
     except Exception:
-        # Fallback if text is too short or empty
         text_score = 0
         
-    # 4. Calculate Skill Match Score
+    # Calculate Skill Match Score
     if required_skills:
         skill_score = int((len(matched_skills) / len(required_skills)) * 100)
     else:
-        skill_score = 100  # If no specific skills required, they didn't fail this part
+        # If no skills found in JD, we rely 100% on text similarity but cap it
+        # This fixes the "61% Great Match" issue when JD is empty
+        skill_score = text_score 
         
-    # 5. Blended Score: 60% Skills, 40% Text similarity
+    # Blended Score: 60% Skills, 40% Text similarity
     final_score = int((skill_score * 0.6) + (text_score * 0.4))
     
     # Generate a simple summary

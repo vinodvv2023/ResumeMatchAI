@@ -147,7 +147,8 @@ def extract_structured(blocks: dict[str, Any]) -> dict[str, Any]:
 
     # Contact (already parsed by ocr_parser)
     contact_lines = blocks.get("contact", [])
-    contact = _parse_contact(contact_lines, raw)
+    extra_links   = blocks.get("links", [])
+    contact = _parse_contact(contact_lines, raw, extra_links)
 
     return {
         "contact":   contact,
@@ -160,14 +161,68 @@ def extract_structured(blocks: dict[str, Any]) -> dict[str, Any]:
     }
 
 
+def redact_pii(text: str, contact: dict[str, str]) -> str:
+    """
+    Remove Name, Email, Phone, and URLs from text to protect privacy.
+    """
+    redacted = text
+    
+    # Redact Name (if found and long enough)
+    name = contact.get("name")
+    if name and len(name) > 3:
+        # Use case-insensitive replacement
+        pattern = re.compile(re.escape(name), re.IGNORECASE)
+        redacted = pattern.sub("[CANDIDATE NAME]", redacted)
+    
+    # Redact Email
+    email = contact.get("email")
+    if email:
+        pattern = re.compile(re.escape(email), re.IGNORECASE)
+        redacted = pattern.sub("[EMAIL REDACTED]", redacted)
+        
+    # Redact Phone
+    phone = contact.get("phone")
+    if phone:
+        pattern = re.compile(re.escape(phone), re.IGNORECASE)
+        redacted = pattern.sub("[PHONE REDACTED]", redacted)
+        
+    # Redact Social/Portfolio URLs
+    for key in ["linkedin", "portfolio", "github"]:
+        url = contact.get(key)
+        if url:
+            # Try to match the whole URL or the specific handle
+            pattern = re.compile(re.escape(url), re.IGNORECASE)
+            redacted = pattern.sub(f"[{key.upper()} REDACTED]", redacted)
+            
+            # Also catch the handle if it's a social link
+            if "/" in url:
+                handle = url.split("/")[-1]
+                if handle and len(handle) > 2:
+                    pattern = re.compile(re.escape(handle), re.IGNORECASE)
+                    redacted = pattern.sub(f"[{key.upper()} HANDLE REDACTED]", redacted)
+
+    # General Regex for any remaining emails or links to be safe
+    email_re = re.compile(r"[\w.+-]+@[\w-]+\.[a-z]{2,}", re.IGNORECASE)
+    url_re = re.compile(r"https?://[\w./\-?&=%]+", re.IGNORECASE)
+    
+    redacted = email_re.sub("[EMAIL REDACTED]", redacted)
+    redacted = url_re.sub("[URL REDACTED]", redacted)
+    
+    return redacted
+
+
 # ── Internal Helpers ──────────────────────────────────────────────────────────
 
-def _parse_contact(lines: list[str], raw: str) -> dict[str, str]:
+def _parse_contact(lines: list[str], raw: str, extra_links: list[str] = None) -> dict[str, str]:
     email_re    = re.compile(r"[\w.+-]+@[\w-]+\.[a-z]{2,}", re.IGNORECASE)
     phone_re    = re.compile(r"(\+?\d[\d\s\-().]{7,}\d)")
     linkedin_re = re.compile(r"linkedin\.com/in/([\w\-]+)", re.IGNORECASE)
+    github_re   = re.compile(r"github\.com/([\w\-]+)", re.IGNORECASE)
+    portfolio_re = re.compile(r"(portfolio|behance\.net|dribbble\.com|personal-website)[\w\-\./]*", re.IGNORECASE)
 
     blob = " ".join(lines) + "\n" + "\n".join(raw.splitlines()[:15])
+    if extra_links:
+        blob += " " + " ".join(extra_links)
 
     contact: dict[str, str] = {}
 
@@ -182,6 +237,27 @@ def _parse_contact(lines: list[str], raw: str) -> dict[str, str]:
     m = linkedin_re.search(blob)
     if m:
         contact["linkedin"] = f"linkedin.com/in/{m.group(1)}"
+    elif extra_links:
+        # Check if any extra link is linkedin
+        for link in extra_links:
+            if "linkedin.com/in/" in link:
+                contact["linkedin"] = link
+                break
+
+    m = github_re.search(blob)
+    if m:
+        contact["portfolio"] = f"github.com/{m.group(1)}"
+    
+    # Other portfolio/links
+    if "portfolio" not in contact:
+        m = portfolio_re.search(blob)
+        if m:
+            contact["portfolio"] = m.group(0)
+        elif extra_links:
+            for link in extra_links:
+                if any(x in link for x in ["github", "gitlab", "behance", "dribbble", "portfolio"]):
+                    contact["portfolio"] = link
+                    break
 
     # Heuristic: first non-empty line in raw that looks like a name
     for line in raw.splitlines()[:5]:
