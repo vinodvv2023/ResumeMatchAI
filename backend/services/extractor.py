@@ -259,12 +259,51 @@ def _parse_contact(lines: list[str], raw: str, extra_links: list[str] = None) ->
                     contact["portfolio"] = link
                     break
 
-    # Heuristic: first non-empty line in raw that looks like a name
-    for line in raw.splitlines()[:5]:
-        line = line.strip()
-        if 2 <= len(line.split()) <= 4 and line.replace(" ", "").isalpha():
-            contact["name"] = line
-            break
+    # Heuristic: Find Name (Strict)
+    lines = raw.splitlines()
+    potential_candidates = []
+    
+    email = contact.get("email")
+    phone = contact.get("phone")
+
+    # 1. Check lines containing Email/Phone (High Probability)
+    for line in lines:
+        if (email and email in line) or (phone and phone in line):
+            # Clean the line of the email/phone to see what's left
+            cleaned = line
+            if email: cleaned = cleaned.replace(email, "")
+            if phone: cleaned = cleaned.replace(phone, "")
+            cleaned = cleaned.strip(" |,:;-_")
+            if cleaned:
+                potential_candidates.append((cleaned, 0.95)) # Higher priority
+
+    # 2. Check top of document (Medium Probability)
+    for line in lines[:7]:
+        potential_candidates.append((line.strip(), 0.80))
+        
+    # 3. Check bottom of document (Low Probability)
+    for line in lines[-5:]:
+        potential_candidates.append((line.strip(), 0.60))
+
+    final_name = None
+    for cand, prob in potential_candidates:
+        if not cand: continue
+        
+        # Strict validation: 2-3 words, All Capitalized, No numbers
+        words = cand.split()
+        if 2 <= len(words) <= 3:
+            # Must be purely alphabetic and properly capitalized (e.g. John Doe)
+            if all(w[0].isupper() and w.isalpha() for w in words if len(w) > 1):
+                # Avoid common resume noise
+                noise = ["CURRICULUM", "VITAE", "RESUME", "PAGE", "SUMMARY", "EXPERIENCE", "PHONE", "EMAIL", "LINKEDIN"]
+                if not any(n in cand.upper() for n in noise):
+                    # Only pre-fill if probability is high (>= 0.80 as per user requirement of 90% logic)
+                    if prob >= 0.80:
+                        final_name = cand
+                        break
+
+    if final_name:
+        contact["name"] = final_name
 
     return contact
 
