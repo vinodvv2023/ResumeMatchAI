@@ -1,9 +1,13 @@
+export const config = {
+  matcher: ["/api/:path*"],
+};
+
 export default async function middleware(req: Request): Promise<Response> {
   try {
     const url = new URL(req.url);
-    const backendUrl = (process.env.VITE_API_URL || 'http://localhost:8000').replace(/\/$/, '');
-    const path = url.pathname.replace(/^\/api\/?/, '');
-    const search = url.search || '';
+    const backendUrl = (process.env.VITE_API_URL || "http://localhost:8000").replace(/\/$/, "");
+    const path = url.pathname.replace(/^\/api\/?/, "").replace(/^\//, "");
+    const search = url.search || "";
     const backendTarget = `${backendUrl}/${path}${search}`;
 
     const headers: Record<string, string> = { 'Accept': 'application/json' };
