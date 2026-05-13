@@ -23,7 +23,14 @@ export default function CreateJob() {
       await api.post('/jobs', formData);
       navigate('/');
     } catch (err: any) {
-      setError(err.response?.data?.detail || 'Failed to create job');
+      const detail = err.response?.data?.detail;
+      if (Array.isArray(detail)) {
+        setError(detail.map((e: any) => e.msg).join(', '));
+      } else if (typeof detail === 'string') {
+        setError(detail);
+      } else {
+        setError('Failed to create job');
+      }
     } finally {
       setLoading(false);
     }

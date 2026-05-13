@@ -21,7 +21,11 @@ export default async function middleware(req: Request): Promise<Response> {
       headers['X-Blaxel-Workspace'] = ws;
     }
 
-    const response = await fetch(backendTarget, { method: req.method, headers, redirect: 'follow' });
+    const fetchOpts: RequestInit = { method: req.method, headers, redirect: 'follow' };
+    if (req.body && ['POST', 'PUT', 'PATCH'].includes(req.method)) {
+      fetchOpts.body = req.body;
+    }
+    const response = await fetch(backendTarget, fetchOpts);
     const rh: Record<string, string> = { 'Access-Control-Allow-Origin': '*' };
     const rct = response.headers.get('content-type');
     if (rct) rh['Content-Type'] = rct;
