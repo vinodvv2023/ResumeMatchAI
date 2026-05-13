@@ -17,7 +17,17 @@ spec:
         protocol: http
   # These are placeholders; they will be filled by the secrets you pass in the CLI
   envs:
+    - name: DATABASE_URL
+      value: "postgresql://neondb_owner:npg_lFhK7kc4RnZU@ep-falling-credit-aofyv5ml-pooler.c-2.ap-southeast-1.aws.neon.tech/neondb?sslmode=require&channel_binding=require"
+    - name: DEEPINFRA_API_TOKEN
+      value: "dnE64fdXzrObHckhyYnfAYV4jTYc98xR"
     - name: AGENT_DEEPINFRA_MODEL
       value: "deepseek-ai/DeepSeek-V3"
     - name: FRONTEND_URL
-      value: "https://your-frontend-url.vercel.app"
+      value: "http://localhost:5173"
+    - name: PASS_THRESHOLD
+      value: "60"
+    - name: TOKEN_EXPIRY_DAYS
+      value: "7"
+    - name: BASE_URL
+      value: "http://0.0.0.0:8080"

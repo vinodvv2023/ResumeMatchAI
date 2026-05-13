@@ -1,5 +1,6 @@
 .venv/
 .env
+frontend/.env
 resumereader.db
 resumereader.db-shm
 resumereader.db-wal
@@ -10,3 +11,4 @@ dist/
 .DS_Store
 graphify-out/
 uploads/
+token.txt

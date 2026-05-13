@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { ArrowLeft, User, Mail, Calendar, CheckCircle, XCircle, FileText, Search, Trash2, AlertCircle, FileUp } from 'lucide-react';
+import { ArrowLeft, User, Mail, Calendar, CheckCircle, XCircle, FileText, Search, Trash2, FileUp } from 'lucide-react';
 import api from '../lib/api';
 import type { RegistryEntry } from '../types';
 
@@ -138,7 +138,7 @@ export default function Registry() {
                     type="checkbox" 
                     className="w-4 h-4 rounded border-white/20 bg-white/10 text-violet-500 focus:ring-violet-500 focus:ring-offset-0 transition-colors"
                     checked={allSelected}
-                    ref={el => el && (el.indeterminate = someSelected)}
+                    ref={(el) => { if (el) el.indeterminate = someSelected; }}
                     onChange={(e) => handleSelectAll(e.target.checked)}
                   />
                 </th>
@@ -293,8 +293,18 @@ export default function Registry() {
                   </div>
                   {detailEntry.filename && (
                     <a 
-                      href={`${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/applications/resume/${detailEntry.resume_id}/file`}
-                      download={detailEntry.filename}
+                       onClick={async (e) => {
+                         e.preventDefault();
+                         try {
+                           const res = await api.get(`/applications/resume/${detailEntry.resume_id}/file`, { responseType: 'blob' });
+                           const url = window.URL.createObjectURL(res.data);
+                           const a = document.createElement('a');
+                           a.href = url;
+                            a.download = detailEntry.filename ?? 'resume.pdf';
+                           a.click();
+                           window.URL.revokeObjectURL(url);
+                         } catch {}
+                       }}
                       className="glass-button flex items-center gap-2 py-3 px-6 !bg-violet-500/20 hover:!bg-violet-500/30 border-violet-500/30"
                     >
                       <FileUp size={18} className="text-violet-400" />
