@@ -1,21 +1,17 @@
-import { NextResponse } from 'next/server';
-import type { NextRequest } from 'next/server';
-
 export const config = {
   matcher: ['/api/:path*'],
 };
 
-export async function middleware(req: NextRequest) {
+export default async function middleware(req: Request) {
+  const url = new URL(req.url);
   const backendUrl = (process.env.VITE_API_URL || 'http://localhost:8000').replace(/\/$/, '');
-  const path = req.nextUrl.pathname.replace(/^\/api\/?/, '');
-  const search = req.nextUrl.search;
+  const path = url.pathname.replace(/^\/api\/?/, '');
+  const search = url.search || '';
   const backendTarget = `${backendUrl}/${path}${search}`;
 
   const headers = new Headers();
   headers.set('Content-Type', req.headers.get('content-type') || 'application/json');
   headers.set('Accept', 'application/json');
-  headers.set('x-forwarded-for', req.headers.get('x-forwarded-for') || '');
-  headers.set('x-forwarded-host', req.headers.get('x-forwarded-host') || '');
 
   const blaxelWorkspace = process.env.VITE_BLAXEL_WORKSPACE || '';
   const blaxelApiKey = process.env.VITE_BLAXEL_API_KEY || '';
@@ -41,12 +37,15 @@ export async function middleware(req: NextRequest) {
     responseHeaders.delete('content-encoding');
     responseHeaders.delete('content-length');
 
-    return new NextResponse(response.body, {
+    return new Response(response.body, {
       status: response.status,
       headers: responseHeaders,
     });
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : 'Proxy error';
-    return NextResponse.json({ error: message }, { status: 502 });
+    return new Response(JSON.stringify({ error: message }), {
+      status: 502,
+      headers: { 'Content-Type': 'application/json' },
+    });
   }
 }
