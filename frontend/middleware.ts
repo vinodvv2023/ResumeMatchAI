@@ -26,7 +26,7 @@ export default async function middleware(req: Request) {
     headers,
   };
 
-  if (!['GET', 'HEAD'].includes(req.method)) {
+  if (req.method !== 'GET' && req.method !== 'HEAD' && req.body) {
     init.body = req.body;
   }
 
