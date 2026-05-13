@@ -2,6 +2,7 @@ import type { VercelRequest, VercelResponse } from '@vercel/node';
 
 const backendUrl = process.env.VITE_API_URL?.replace(/\/$/, "") || "http://localhost:8000";
 const ws = process.env.VITE_BLAXEL_WORKSPACE || '';
+const ak = process.env.VITE_BLAXEL_API_KEY || '';
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   const incomingPath = req.url || '/';
