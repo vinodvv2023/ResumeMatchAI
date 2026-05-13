@@ -24,7 +24,7 @@ spec:
     - name: AGENT_DEEPINFRA_MODEL
       value: "deepseek-ai/DeepSeek-V3"
     - name: FRONTEND_URL
-      value: "http://localhost:5173"
+      value: "https://resume-match-ai-eight.vercel.app"
     - name: PASS_THRESHOLD
       value: "60"
     - name: TOKEN_EXPIRY_DAYS
