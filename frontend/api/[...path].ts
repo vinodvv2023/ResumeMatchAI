@@ -2,13 +2,6 @@ import type { VercelRequest, VercelResponse } from '@vercel/node';
 
 const backendUrl = process.env.VITE_API_URL?.replace(/\/$/, "") || "http://localhost:8000";
 const ws = process.env.VITE_BLAXEL_WORKSPACE || '';
-const ak = process.env.VITE_BLAXEL_API_KEY || '';
-
-export const config = {
-  api: {
-    bodyParser: true,
-  },
-};
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   const incomingPath = req.url || '/';
@@ -28,8 +21,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (hasBody && req.body != null) {
     body = typeof req.body === 'string' ? req.body : JSON.stringify(req.body);
   }
-
-  console.log(`[proxy] ${req.method} ${url} body=${body ? body.substring(0, 200) : 'null'}`);
 
   try {
     const fetchRes = await fetch(url, { method: req.method || 'GET', headers, body, redirect: 'follow' });
