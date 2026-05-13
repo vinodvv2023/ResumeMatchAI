@@ -83,7 +83,14 @@ export default function ApplyGate() {
 
       setStep(response.data.passed ? 'pass' : 'fail');
     } catch (err: any) {
-      setError(err.response?.data?.detail || 'Failed to process resume');
+      const detail = err.response?.data?.detail;
+      if (Array.isArray(detail)) {
+        setError(detail.map((e: any) => e.msg).join(', '));
+      } else if (typeof detail === 'string') {
+        setError(detail);
+      } else {
+        setError('Failed to process resume');
+      }
       setStep('upload');
     }
   };
@@ -97,7 +104,14 @@ export default function ApplyGate() {
       await api.post('/applications', { ...appForm, match_id: result.match_id });
       setAppSuccess(true);
     } catch (err: any) {
-      setError(err.response?.data?.detail || 'Failed to submit application');
+      const detail = err.response?.data?.detail;
+      if (Array.isArray(detail)) {
+        setError(detail.map((e: any) => e.msg).join(', '));
+      } else if (typeof detail === 'string') {
+        setError(detail);
+      } else {
+        setError('Failed to submit application');
+      }
     } finally {
       setAppSubmitting(false);
     }

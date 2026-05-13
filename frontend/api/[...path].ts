@@ -4,23 +4,38 @@ const backendUrl = process.env.VITE_API_URL?.replace(/\/$/, "") || "http://local
 const ws = process.env.VITE_BLAXEL_WORKSPACE || '';
 const ak = process.env.VITE_BLAXEL_API_KEY || '';
 
+export const config = {
+  api: {
+    bodyParser: false,
+  },
+};
+
+function getRawBody(req: import('stream').Readable): Promise<Buffer> {
+  return new Promise((resolve, reject) => {
+    const chunks: Buffer[] = [];
+    req.on('data', (chunk: Buffer) => chunks.push(chunk));
+    req.on('end', () => resolve(Buffer.concat(chunks)));
+    req.on('error', reject);
+  });
+}
+
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   const incomingPath = req.url || '/';
   const stripped = incomingPath.replace(/^\/api\/?/, '');
   const url = `${backendUrl}/${stripped}`;
 
+  const ct = req.headers['content-type'] || '';
   const headers: Record<string, string> = { Accept: 'application/json' };
-  const ct = req.headers['content-type'];
-  if (ct && typeof ct === 'string') headers['Content-Type'] = ct;
+  if (ct) headers['Content-Type'] = ct;
   if (ak && ws) {
     headers['X-Blaxel-Authorization'] = `Bearer ${ak}`;
     headers['X-Blaxel-Workspace'] = ws;
   }
 
-  const hasBody = ['POST', 'PUT', 'PATCH'].includes(req.method || '');
   let body: string | undefined;
-  if (hasBody && req.body != null) {
-    body = typeof req.body === 'string' ? req.body : JSON.stringify(req.body);
+  if (['POST', 'PUT', 'PATCH'].includes(req.method || '')) {
+    const raw = await getRawBody(req as unknown as import('stream').Readable);
+    body = raw.toString('latin1');
   }
 
   try {
