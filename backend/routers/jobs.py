@@ -5,7 +5,7 @@ import uuid
 import datetime
 
 from backend.database import get_db
-from backend.models import Job, ShareToken, MatchResult
+from backend.models import Job, ShareToken, MatchResult, Application, Resume
 from backend.schemas import JobCreate, JobOut, JobUpdate
 from backend.services.magic_link import generate_token, generate_magic_link, get_expiry
 from backend.config import PASS_THRESHOLD
