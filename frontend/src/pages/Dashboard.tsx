@@ -16,7 +16,7 @@ export default function Dashboard() {
   const fetchJobs = async () => {
     try {
       const response = await api.get<Job[]>('/jobs');
-      setJobs(response.data);
+      setJobs(Array.isArray(response.data) ? response.data : []);
     } catch (error) {
       console.error('Failed to fetch jobs', error);
     } finally {
