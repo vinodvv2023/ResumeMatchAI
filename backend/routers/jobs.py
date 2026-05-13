@@ -116,7 +116,16 @@ def delete_job(job_id: str, db: Session = Depends(get_db)):
     db_job = db.query(Job).filter(Job.id == job_id).first()
     if not db_job:
         raise HTTPException(status_code=404, detail="Job not found")
-        
+
+    match_result_ids = [mr.id for mr in db.query(MatchResult).filter(MatchResult.job_id == job_id).all()]
+    if match_result_ids:
+        db.query(Application).filter(Application.match_id.in_(match_result_ids)).delete(synchronize_session=False)
+        db.query(MatchResult).filter(MatchResult.job_id == job_id).delete(synchronize_session=False)
+        db.query(Resume).filter(Resume.token.in_(
+            [st.token for st in db.query(ShareToken).filter(ShareToken.job_id == job_id).all()]
+        )).delete(synchronize_session=False)
+        db.query(ShareToken).filter(ShareToken.job_id == job_id).delete(synchronize_session=False)
+
     db.delete(db_job)
     db.commit()
     return None
