@@ -9,9 +9,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   }
 
   const backendUrl = (process.env.VITE_API_URL || 'http://localhost:8000').replace(/\/$/, '');
-  const path = (req.query.path as string[] || []).join('/');
-  const search = req.url?.includes('?') ? req.url!.substring(req.url!.indexOf('?')) : '';
-  const backendTarget = `${backendUrl}/${path}${search}`;
+  const url = new URL(req.url!, `https://${req.headers.host}`);
+  let pathStr = url.pathname.replace(/^\/api\/?/, '');
+  const search = url.search;
+  const backendTarget = `${backendUrl}/${pathStr}${search}`;
 
   const headers: Record<string, string> = {
     'Content-Type': req.headers['content-type'] || 'application/json',
