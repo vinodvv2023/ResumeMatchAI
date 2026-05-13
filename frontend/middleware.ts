@@ -21,7 +21,7 @@ export default async function middleware(req: Request): Promise<Response> {
       headers['X-Blaxel-Workspace'] = ws;
     }
 
-    let body: BodyInit | undefined;
+    let body: string | undefined;
     if (['POST', 'PUT', 'PATCH'].includes(req.method)) {
       body = await req.text();
       if (!body) body = undefined;
