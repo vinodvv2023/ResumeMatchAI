@@ -1,3 +1,4 @@
+/// <reference types="node" />
 export const config = {
   matcher: ["/api/:path*"],
 };
