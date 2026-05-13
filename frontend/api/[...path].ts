@@ -4,6 +4,12 @@ const backendUrl = process.env.VITE_API_URL?.replace(/\/$/, "") || "http://local
 const ws = process.env.VITE_BLAXEL_WORKSPACE || '';
 const ak = process.env.VITE_BLAXEL_API_KEY || '';
 
+export const config = {
+  api: {
+    bodyParser: true,
+  },
+};
+
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   const incomingPath = req.url || '/';
   const stripped = incomingPath.replace(/^\/api\/?/, '');
@@ -18,7 +24,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   }
 
   const hasBody = ['POST', 'PUT', 'PATCH'].includes(req.method || '');
-  const body = hasBody ? (typeof req.body === 'string' ? req.body : JSON.stringify(req.body)) : undefined;
+  let body: string | undefined;
+  if (hasBody && req.body != null) {
+    body = typeof req.body === 'string' ? req.body : JSON.stringify(req.body);
+  }
+
+  console.log(`[proxy] ${req.method} ${url} body=${body ? body.substring(0, 200) : 'null'}`);
 
   try {
     const fetchRes = await fetch(url, { method: req.method || 'GET', headers, body, redirect: 'follow' });
