@@ -86,7 +86,8 @@ def calculate_match(job_description: str, sections: dict, contact_info: dict[str
     # 2. Fallback to existing Logic (no LLM)
     # -------------------------------------
     
-    # Extract required skills from Job Description
+    # Extract skills from resume text and job description
+    resume_skills = extract_skills_from_text(filtered_resume)
     required_skills = extract_skills_from_text(job_description)
     
     # Find overlap
@@ -97,7 +98,7 @@ def calculate_match(job_description: str, sections: dict, contact_info: dict[str
     missing_skills = list(required_skills_set - candidate_skills_set)
     
     # Calculate TF-IDF Cosine Similarity for overall text match
-    documents = [job_description.lower(), resume_raw_text.lower()]
+    documents = [job_description.lower(), filtered_resume.lower()]
     
     try:
         vectorizer = TfidfVectorizer(stop_words='english')
