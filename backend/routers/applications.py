@@ -101,8 +101,11 @@ def delete_application(match_id: str, db: Session = Depends(get_db)):
     if not match:
         raise HTTPException(status_code=404, detail="Match result not found")
     
-    # We should also consider deleting the Resume if it's no longer needed, 
-    # but for now we follow the CASCADE on Application.
+    resume = db.query(Resume).filter(Resume.id == match.resume_id).first()
+    if resume and resume.file_path and os.path.exists(resume.file_path):
+        os.remove(resume.file_path)
+    if resume:
+        db.delete(resume)
     db.delete(match)
     db.commit()
     return None
@@ -113,6 +116,11 @@ def bulk_delete_applications(data: BulkDelete, db: Session = Depends(get_db)):
     """Delete multiple match results and their associated applications."""
     matches = db.query(MatchResult).filter(MatchResult.id.in_(data.ids)).all()
     for match in matches:
+        resume = db.query(Resume).filter(Resume.id == match.resume_id).first()
+        if resume and resume.file_path and os.path.exists(resume.file_path):
+            os.remove(resume.file_path)
+        if resume:
+            db.delete(resume)
         db.delete(match)
     db.commit()
     return None
