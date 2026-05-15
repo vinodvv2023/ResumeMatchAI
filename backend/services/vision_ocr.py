@@ -2,14 +2,14 @@ import base64
 import io
 from pathlib import Path
 
-import httpx
+from openai import OpenAI
 
-from backend.config import GOOGLE_CLOUD_VISION_API_KEY
+from backend.config import DEEPINFRA_API_TOKEN, VISION_MODEL
 
 
 def extract_text_from_pdf_bytes(file_bytes: bytes, filename: str) -> str:
-    if not GOOGLE_CLOUD_VISION_API_KEY:
-        raise RuntimeError("GOOGLE_CLOUD_VISION_API_KEY not set")
+    if not DEEPINFRA_API_TOKEN:
+        raise RuntimeError("DEEPINFRA_API_TOKEN not set")
 
     ext = Path(filename).suffix.lower()
     images_b64 = []
@@ -24,32 +24,35 @@ def extract_text_from_pdf_bytes(file_bytes: bytes, filename: str) -> str:
     else:
         images_b64.append(base64.b64encode(file_bytes).decode("ascii"))
 
-    api_url = "https://vision.googleapis.com/v1/images:annotate"
-    all_text = []
+    client = OpenAI(
+        api_key=DEEPINFRA_API_TOKEN,
+        base_url="https://api.deepinfra.com/v1/openai",
+    )
 
+    all_text = []
     for i, img_b64 in enumerate(images_b64):
-        payload = {
-            "requests": [
-                {
-                    "image": {"content": img_b64},
-                    "features": [{"type": "DOCUMENT_TEXT_DETECTION"}],
-                }
-            ]
-        }
-        resp = httpx.post(
-            api_url,
-            json=payload,
-            params={"key": GOOGLE_CLOUD_VISION_API_KEY},
-            timeout=30,
-        )
-        if resp.status_code != 200:
-            print(f"[OCR] Vision API page {i+1} error {resp.status_code}: {resp.text[:200]}")
-            continue
-        result = resp.json()
-        for r in result.get("responses", []):
-            ann = r.get("fullTextAnnotation", {})
-            text = ann.get("text", "")
+        try:
+            response = client.chat.completions.create(
+                model=VISION_MODEL,
+                messages=[
+                    {
+                        "role": "system",
+                        "content": "Extract ALL text from this document page exactly as written. Preserve formatting, line breaks, and structure. Output only the extracted text, nothing else.",
+                    },
+                    {
+                        "role": "user",
+                        "content": [
+                            {"type": "image_url", "image_url": {"url": f"data:image/png;base64,{img_b64}"}},
+                        ],
+                    },
+                ],
+                temperature=0.0,
+            )
+            text = response.choices[0].message.content
             if text:
-                all_text.append(text)
+                all_text.append(text.strip())
+        except Exception as e:
+            print(f"[OCR] Vision model page {i+1} error: {e}")
+            continue
 
     return "\n".join(all_text)

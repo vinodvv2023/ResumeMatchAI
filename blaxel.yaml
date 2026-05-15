@@ -31,5 +31,3 @@ spec:
       value: "7"
     - name: BASE_URL
       value: "http://0.0.0.0:8080"
-    - name: GOOGLE_CLOUD_VISION_API_KEY
-      value: ""
