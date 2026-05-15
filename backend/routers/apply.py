@@ -62,7 +62,7 @@ async def upload_resume(token: str, file: UploadFile = File(...), db: Session = 
     file_path = f"{upload_dir}/{resume_id}_{file.filename}"
     
     file_bytes = await file.read()
-    logger.info(f"Upload received: {file.filename}, size={len(file_bytes)} bytes")
+    print(f"[UPLOAD] file={file.filename}, size={len(file_bytes)} bytes")
 
     with open(file_path, "wb") as buffer:
         buffer.write(file_bytes)
@@ -71,10 +71,10 @@ async def upload_resume(token: str, file: UploadFile = File(...), db: Session = 
     try:
         blocks = parse_file(file_bytes, file.filename or "unknown.pdf")
         raw_text = blocks.get("raw_text", "")
-        logger.info(f"Parsed: raw_text length={len(raw_text)}, sections={list(blocks.keys())}")
+        print(f"[UPLOAD] parsed: raw_text_len={len(raw_text)}, sections={list(blocks.keys())}")
         structured_data = extract_structured(blocks)
     except Exception as e:
-        logger.error(f"Parsing failed: {e}", exc_info=True)
+        print(f"[UPLOAD] ERROR parsing: {e}")
         raise HTTPException(status_code=400, detail=f"Error parsing file: {str(e)}")
         
     # 4. Save Resume to DB
