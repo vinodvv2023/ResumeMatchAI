@@ -103,35 +103,32 @@ def parse_file(file_bytes: bytes, filename: str) -> dict[str, Any]:
 # ── PDF Parser ───────────────────────────────────────────────────────────────
 
 def _parse_pdf(file_bytes: bytes) -> dict[str, Any]:
-    import pdfplumber
-
     print(f"[OCR] _parse_pdf received {len(file_bytes)} bytes, first 20 bytes hex: {file_bytes[:20].hex()}")
+
+    import fitz
 
     links = []
     try:
-        with pdfplumber.open(io.BytesIO(file_bytes)) as pdf:
-            pages_text = [p.extract_text() or "" for p in pdf.pages]
-            
-            # Extract hyperlinks (annots)
-            for page in pdf.pages:
-                if page.annots:
-                    for annot in page.annots:
-                        if annot.get("uri"):
-                            links.append(annot["uri"])
-                            
+        doc = fitz.open(stream=file_bytes, filetype="pdf")
+        pages_text = []
+        for page in doc:
+            text = page.get_text() or ""
+            pages_text.append(text)
+            for annot in page.annots():
+                if annot.info.get("uri"):
+                    links.append(annot.info["uri"])
+        doc.close()
+
         text = "\n".join(pages_text).strip()
+        print(f"[OCR] PyMuPDF extracted {len(text)} chars")
 
         # If very little text was extracted, fall back to OCR
         if len(text) < 100:
             print(f"[OCR] Digital text too short ({len(text)} chars), falling back to OCR")
             text = _pdf_ocr(file_bytes)
             print(f"[OCR] OCR result length: {len(text)} chars")
-            if len(text) < 100:
-                print(f"[OCR] Tesseract OCR insufficient, falling back to DeepInfra Vision ({VISION_MODEL})")
-                text = _vision_ocr_fallback(file_bytes)
-                print(f"[OCR] Vision OCR result length: {len(text)} chars")
     except Exception as exc:
-        print(f"[OCR] pdfplumber failed ({exc}), trying OCR + Vision fallback")
+        print(f"[OCR] PyMuPDF failed ({exc}), trying OCR + Vision fallback")
         text = _pdf_ocr(file_bytes)
         if len(text) < 100:
             text = _vision_ocr_fallback(file_bytes)
@@ -142,23 +139,21 @@ def _parse_pdf(file_bytes: bytes) -> dict[str, Any]:
 def _pdf_ocr(file_bytes: bytes) -> str:
     """Convert PDF pages to images and run Tesseract OCR on each."""
     try:
-        from pdf2image import convert_from_bytes
+        import fitz
         import pytesseract
-        import cv2
         import numpy as np
         from PIL import Image
 
-        images = convert_from_bytes(file_bytes, dpi=300)
-        print(f"[OCR] pdf2image produced {len(images)} pages")
+        doc = fitz.open(stream=file_bytes, filetype="pdf")
+        print(f"[OCR] PyMuPDF OCR: {len(doc)} pages")
         parts: list[str] = []
 
-        for img in images:
-            # Pre-process: grayscale + threshold for cleaner OCR
-            cv_img = cv2.cvtColor(np.array(img), cv2.COLOR_RGB2GRAY)
-            _, binary = cv2.threshold(cv_img, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
-            pil_img = Image.fromarray(binary)
-            page_text = pytesseract.image_to_string(pil_img, config="--psm 6")
+        for page in doc:
+            pix = page.get_pixmap(dpi=300)
+            img = Image.frombytes("RGB", [pix.width, pix.height], pix.samples)
+            page_text = pytesseract.image_to_string(img, config="--psm 6")
             parts.append(page_text)
+        doc.close()
 
         return "\n".join(parts)
     except ImportError as e:

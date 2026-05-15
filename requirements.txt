@@ -8,6 +8,7 @@ pdfplumber
 pdf2image
 pytesseract
 Pillow
+PyMuPDF
 opencv-python-headless
 python-docx
 striprtf

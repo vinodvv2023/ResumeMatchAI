@@ -1,5 +1,4 @@
 import base64
-import io
 from pathlib import Path
 
 from openai import OpenAI
@@ -15,14 +14,15 @@ def extract_text_from_pdf_bytes(file_bytes: bytes, filename: str) -> str:
     images_b64 = []
 
     if ext == ".pdf":
-        from pdf2image import convert_from_bytes
-        pages = convert_from_bytes(file_bytes, dpi=300)
-        print(f"[OCR] pdf2image converted {len(pages)} pages")
-        for img in pages:
-            buf = io.BytesIO()
-            img.save(buf, format="PNG")
-            images_b64.append(base64.b64encode(buf.getvalue()).decode("ascii"))
-            print(f"[OCR] page image size: {buf.tell()} bytes")
+        import fitz
+        doc = fitz.open(stream=file_bytes, filetype="pdf")
+        print(f"[OCR] PyMuPDF vision: {len(doc)} pages")
+        for page in doc:
+            pix = page.get_pixmap(dpi=300)
+            img_bytes = pix.tobytes("png")
+            images_b64.append(base64.b64encode(img_bytes).decode("ascii"))
+            print(f"[OCR] page image size: {len(img_bytes)} bytes")
+        doc.close()
     else:
         images_b64.append(base64.b64encode(file_bytes).decode("ascii"))
 
