@@ -54,6 +54,8 @@ def extract_text_from_pdf_bytes(file_bytes: bytes, filename: str) -> str:
                 temperature=0.0,
             )
             text = response.choices[0].message.content
+            if i == 0:
+                print(f"[OCR] Vision API response: finish_reason={response.choices[0].finish_reason}, content_len={len(text or '')}")
             if text:
                 all_text.append(text.strip())
         except Exception as e:
