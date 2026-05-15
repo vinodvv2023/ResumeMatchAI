@@ -32,10 +32,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     headers['X-Blaxel-Workspace'] = ws;
   }
 
-  let body: string | undefined;
+  let body: Buffer | string | undefined;
   if (['POST', 'PUT', 'PATCH'].includes(req.method || '')) {
-    const raw = await getRawBody(req as unknown as import('stream').Readable);
-    body = raw.toString('latin1');
+    body = await getRawBody(req as unknown as import('stream').Readable);
   }
 
   try {

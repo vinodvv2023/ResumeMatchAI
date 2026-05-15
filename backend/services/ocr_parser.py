@@ -84,20 +84,36 @@ _HEADER_RE = re.compile(
 
 # ── Format Detection ─────────────────────────────────────────────────────────
 
+def _detect_real_format(file_bytes: bytes, filename: str) -> str:
+    """Detect actual file format by magic bytes, falling back to extension."""
+    header = file_bytes[:8]
+    if header[:5] == b"%PDF-":
+        return ".pdf"
+    if header[:4] == b"PK\x03\x04":
+        return ".docx"
+    if header[:5] == b"{\\rtf":
+        return ".rtf"
+    ext = Path(filename).suffix.lower()
+    if ext in (".pdf", ".docx", ".doc", ".rtf", ".txt"):
+        return ext
+    return ".txt"
+
+
 def parse_file(file_bytes: bytes, filename: str) -> dict[str, Any]:
     """Entry point: detect format and return structured blocks."""
     ext = Path(filename).suffix.lower()
+    real_ext = _detect_real_format(file_bytes, filename)
+    if real_ext != ext:
+        print(f"[OCR] Extension mismatch: file='{filename}' (ext={ext}) but magic bytes say {real_ext}")
 
-    if ext == ".pdf":
+    if real_ext == ".pdf":
         return _parse_pdf(file_bytes)
-    elif ext in (".docx", ".doc"):
+    elif real_ext in (".docx", ".doc"):
         return _parse_docx(file_bytes)
-    elif ext == ".rtf":
+    elif real_ext == ".rtf":
         return _parse_rtf(file_bytes)
-    elif ext == ".txt":
-        return _parse_txt(file_bytes)
     else:
-        raise ValueError(f"Unsupported file type: {ext}")
+        return _parse_txt(file_bytes)
 
 
 # ── PDF Parser ───────────────────────────────────────────────────────────────
@@ -105,33 +121,60 @@ def parse_file(file_bytes: bytes, filename: str) -> dict[str, Any]:
 def _parse_pdf(file_bytes: bytes) -> dict[str, Any]:
     print(f"[OCR] _parse_pdf received {len(file_bytes)} bytes, first 20 bytes hex: {file_bytes[:20].hex()}")
 
-    import fitz
-
     links = []
+    text = ""
+
+    # Strategy 1: pdfplumber (pure Python zlib) — works when system zlib is broken
     try:
-        doc = fitz.open(stream=file_bytes, filetype="pdf")
-        pages_text = []
-        for page in doc:
-            text = page.get_text() or ""
-            pages_text.append(text)
-            for annot in page.annots():
-                if annot.info.get("uri"):
-                    links.append(annot.info["uri"])
-        doc.close()
-
-        text = "\n".join(pages_text).strip()
-        print(f"[OCR] PyMuPDF extracted {len(text)} chars")
-
-        # If very little text was extracted, fall back to OCR
-        if len(text) < 100:
-            print(f"[OCR] Digital text too short ({len(text)} chars), falling back to OCR")
-            text = _pdf_ocr(file_bytes)
-            print(f"[OCR] OCR result length: {len(text)} chars")
+        import pdfplumber
+        import io
+        with pdfplumber.open(io.BytesIO(file_bytes)) as pdf:
+            for page in pdf.pages:
+                page_text = page.extract_text() or ""
+                text += page_text + "\n"
+            for page in pdf.pages:
+                if page.links:
+                    for link in page.links:
+                        links.append(link.get("uri", ""))
+        text = text.strip()
+        print(f"[OCR] pdfplumber extracted {len(text)} chars")
     except Exception as exc:
-        print(f"[OCR] PyMuPDF failed ({exc}), trying OCR + Vision fallback")
-        text = _pdf_ocr(file_bytes)
-        if len(text) < 100:
-            text = _vision_ocr_fallback(file_bytes)
+        print(f"[OCR] pdfplumber failed ({exc})")
+
+    # Strategy 2: PyMuPDF
+    if len(text) < 100:
+        try:
+            import fitz
+            doc = fitz.open(stream=file_bytes, filetype="pdf")
+            pages_text = []
+            for page in doc:
+                page_text = page.get_text() or ""
+                pages_text.append(page_text)
+                for annot in page.annots():
+                    if annot.info.get("uri"):
+                        links.append(annot.info["uri"])
+            doc.close()
+            fitz_text = "\n".join(pages_text).strip()
+            if len(fitz_text) > len(text):
+                text = fitz_text
+            print(f"[OCR] PyMuPDF extracted {len(fitz_text)} chars")
+        except Exception as exc:
+            print(f"[OCR] PyMuPDF failed ({exc})")
+
+    # Strategy 3: OCR (Tesseract on rendered pages)
+    if len(text) < 100:
+        print(f"[OCR] Text too short ({len(text)} chars), falling back to Tesseract OCR")
+        ocr_text = _pdf_ocr(file_bytes)
+        if len(ocr_text) > len(text):
+            text = ocr_text
+        print(f"[OCR] OCR result length: {len(text)} chars")
+
+    # Strategy 4: Vision model
+    if len(text) < 100:
+        print(f"[OCR] OCR insufficient, falling back to Vision model")
+        vision_text = _vision_ocr_fallback(file_bytes)
+        if len(vision_text) > len(text):
+            text = vision_text
 
     return _build_blocks(text, links)
 

@@ -9,6 +9,7 @@ pdf2image
 pytesseract
 Pillow
 PyMuPDF
+pikepdf
 opencv-python-headless
 python-docx
 striprtf
