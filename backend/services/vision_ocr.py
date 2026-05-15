@@ -33,40 +33,32 @@ def extract_text_from_pdf_bytes(file_bytes: bytes, filename: str) -> str:
         base_url="https://api.deepinfra.com/v1/openai",
     )
 
-    all_text = []
-    for i, img_b64 in enumerate(images_b64):
-        try:
-            response = client.chat.completions.create(
-                model=VISION_MODEL,
-                messages=[
-                    {
-                        "role": "system",
-                        "content": "You are a document OCR tool. Extract ALL text from the image exactly as written, preserving structure and line breaks. Output only the extracted text.",
-                    },
-                    {
-                        "role": "user",
-                        "content": [
-                            {
-                                "type": "image_url",
-                                "image_url": {"url": f"data:image/png;base64,{img_b64}"},
-                            },
-                            {
-                                "type": "text",
-                                "text": "Extract all text from this page.",
-                            },
-                        ],
-                    },
-                ],
-                temperature=0.0,
-                max_tokens=4092,
-            )
-            text = response.choices[0].message.content or ""
-            finish = response.choices[0].finish_reason
-            print(f"[OCR] Vision page {i+1}: finish_reason={finish}, content_len={len(text)}")
-            if text:
-                all_text.append(text.strip())
-        except Exception as e:
-            print(f"[OCR] Vision page {i+1} error: {type(e).__name__}: {e}")
-            continue
+    content_items = []
+    for img_b64 in images_b64:
+        content_items.append({
+            "type": "image_url",
+            "image_url": {"url": f"data:image/png;base64,{img_b64}"},
+        })
+    content_items.append({
+        "type": "text",
+        "text": "Extract ALL text from these document pages exactly as written. Preserve formatting, line breaks, and structure. Output only the extracted text, nothing else.",
+    })
 
-    return "\n".join(all_text)
+    try:
+        response = client.chat.completions.create(
+            model=VISION_MODEL,
+            messages=[
+                {
+                    "role": "user",
+                    "content": content_items,
+                },
+            ],
+            temperature=0.0,
+            max_tokens=4092,
+        )
+        text = response.choices[0].message.content or ""
+        print(f"[OCR] Vision API: finish_reason={response.choices[0].finish_reason}, content_len={len(text)}")
+        return text.strip()
+    except Exception as e:
+        print(f"[OCR] Vision API error: {type(e).__name__}: {e}")
+        return ""
