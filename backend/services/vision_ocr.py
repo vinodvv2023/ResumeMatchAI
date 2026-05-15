@@ -1,8 +1,6 @@
 import base64
 import io
-import json
 from pathlib import Path
-from typing import Any
 
 import httpx
 
@@ -14,72 +12,44 @@ def extract_text_from_pdf_bytes(file_bytes: bytes, filename: str) -> str:
         raise RuntimeError("GOOGLE_CLOUD_VISION_API_KEY not set")
 
     ext = Path(filename).suffix.lower()
-    mime = "application/pdf" if ext == ".pdf" else "image/png"
+    images_b64 = []
 
-    payload = {
-        "requests": [
-            {
-                "image": {"content": base64.b64encode(file_bytes).decode("ascii")},
-                "features": [
-                    {"type": "DOCUMENT_TEXT_DETECTION"},
-                ],
-            }
-        ]
-    }
+    if ext == ".pdf":
+        from pdf2image import convert_from_bytes
+        pages = convert_from_bytes(file_bytes, dpi=300)
+        for img in pages:
+            buf = io.BytesIO()
+            img.save(buf, format="PNG")
+            images_b64.append(base64.b64encode(buf.getvalue()).decode("ascii"))
+    else:
+        images_b64.append(base64.b64encode(file_bytes).decode("ascii"))
 
-    url = f"https://vision.googleapis.com/v1/files:asyncBatchAnnotate"
-    headers = {"Content-Type": "application/json"}
+    api_url = "https://vision.googleapis.com/v1/images:annotate"
+    all_text = []
 
-    async def _extract():
-        async with httpx.AsyncClient(timeout=60) as client:
-            if ext == ".pdf":
-                resp = await client.post(url, json=payload, params={"key": GOOGLE_CLOUD_VISION_API_KEY}, headers=headers)
-                resp.raise_for_status()
-                result = resp.json()
-                operation_name = result["name"]
-                poll_url = f"https://vision.googleapis.com/v1/{operation_name}"
-                import asyncio
-                for _ in range(30):
-                    await asyncio.sleep(2)
-                    poll_resp = await client.get(poll_url, params={"key": GOOGLE_CLOUD_VISION_API_KEY})
-                    poll_resp.raise_for_status()
-                    poll_result = poll_resp.json()
-                    if poll_result.get("done"):
-                        responses = poll_result.get("responses", [])
-                        full_text = []
-                        for r in responses:
-                            ann = r.get("fullTextAnnotation", {})
-                            text = ann.get("text", "")
-                            if text:
-                                full_text.append(text)
-                        return "\n".join(full_text)
-                return ""
-            else:
-                resp = await client.post(
-                    "https://vision.googleapis.com/v1/images:annotate",
-                    json=payload,
-                    params={"key": GOOGLE_CLOUD_VISION_API_KEY},
-                    headers=headers,
-                )
-                resp.raise_for_status()
-                result = resp.json()
-                responses = result.get("responses", [])
-                full_text = []
-                for r in responses:
-                    ann = r.get("fullTextAnnotation", {})
-                    text = ann.get("text", "")
-                    if text:
-                        full_text.append(text)
-                return "\n".join(full_text)
+    for i, img_b64 in enumerate(images_b64):
+        payload = {
+            "requests": [
+                {
+                    "image": {"content": img_b64},
+                    "features": [{"type": "DOCUMENT_TEXT_DETECTION"}],
+                }
+            ]
+        }
+        resp = httpx.post(
+            api_url,
+            json=payload,
+            params={"key": GOOGLE_CLOUD_VISION_API_KEY},
+            timeout=30,
+        )
+        if resp.status_code != 200:
+            print(f"[OCR] Vision API page {i+1} error {resp.status_code}: {resp.text[:200]}")
+            continue
+        result = resp.json()
+        for r in result.get("responses", []):
+            ann = r.get("fullTextAnnotation", {})
+            text = ann.get("text", "")
+            if text:
+                all_text.append(text)
 
-    import asyncio
-    try:
-        loop = asyncio.get_event_loop()
-        if loop.is_running():
-            import concurrent.futures
-            with concurrent.futures.ThreadPoolExecutor() as pool:
-                return pool.submit(asyncio.run, _extract()).result(timeout=120)
-        else:
-            return asyncio.run(_extract())
-    except RuntimeError:
-        return asyncio.run(_extract())
+    return "\n".join(all_text)
