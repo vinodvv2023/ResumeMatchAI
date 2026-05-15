@@ -7,17 +7,9 @@ const ak = process.env.VITE_BLAXEL_API_KEY || '';
 export const config = {
   api: {
     bodyParser: false,
+    bodySizeLimit: '10mb',
   },
 };
-
-function getRawBody(req: import('stream').Readable): Promise<Buffer> {
-  return new Promise((resolve, reject) => {
-    const chunks: Buffer[] = [];
-    req.on('data', (chunk: Buffer) => chunks.push(chunk));
-    req.on('end', () => resolve(Buffer.concat(chunks)));
-    req.on('error', reject);
-  });
-}
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   const incomingPath = req.url || '/';
@@ -32,15 +24,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     headers['X-Blaxel-Workspace'] = ws;
   }
 
-  let body: Uint8Array | string | undefined;
+  let body: import('stream').Readable | undefined;
   if (['POST', 'PUT', 'PATCH'].includes(req.method || '')) {
-    const raw = await getRawBody(req as unknown as import('stream').Readable);
-    body = new Uint8Array(raw);
-    headers['Content-Length'] = String(raw.length);
+    body = req as unknown as import('stream').Readable;
   }
 
   try {
-    const fetchRes = await fetch(url, { method: req.method || 'GET', headers, body, redirect: 'follow' });
+    const fetchRes = await fetch(url, { method: req.method || 'GET', headers, body, duplex: 'half', redirect: 'follow' });
     const data = await fetchRes.text();
     res.status(fetchRes.status).setHeader('Content-Type', fetchRes.headers.get('content-type') || 'application/json').send(data);
   } catch (err: unknown) {
