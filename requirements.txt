@@ -8,7 +8,7 @@ pdfplumber
 pdf2image
 pytesseract
 Pillow
-opencv-python
+opencv-python-headless
 python-docx
 striprtf
 scikit-learn
