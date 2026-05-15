@@ -122,9 +122,15 @@ def _parse_pdf(file_bytes: bytes) -> dict[str, Any]:
             print(f"[OCR] Digital text too short ({len(text)} chars), falling back to OCR")
             text = _pdf_ocr(file_bytes)
             print(f"[OCR] OCR result length: {len(text)} chars")
+            if len(text) < 100:
+                print(f"[OCR] Tesseract OCR insufficient, falling back to Google Cloud Vision")
+                text = _vision_ocr_fallback(file_bytes)
+                print(f"[OCR] Vision OCR result length: {len(text)} chars")
     except Exception as exc:
-        logger.warning("pdfplumber failed (%s), trying OCR", exc)
+        print(f"[OCR] pdfplumber failed ({exc}), trying OCR + Vision fallback")
         text = _pdf_ocr(file_bytes)
+        if len(text) < 100:
+            text = _vision_ocr_fallback(file_bytes)
 
     return _build_blocks(text, links)
 
@@ -138,7 +144,7 @@ def _pdf_ocr(file_bytes: bytes) -> str:
         import numpy as np
         from PIL import Image
 
-        images = convert_from_bytes(file_bytes, dpi=200)
+        images = convert_from_bytes(file_bytes, dpi=300)
         parts: list[str] = []
 
         for img in images:
@@ -296,3 +302,13 @@ def _extract_contact(raw_text: str, existing: list[str]) -> list[str]:
             contact.append(f"linkedin: {m}")
 
     return contact
+
+
+def _vision_ocr_fallback(file_bytes: bytes) -> str:
+    """Use Google Cloud Vision API when Tesseract fails."""
+    try:
+        from backend.services.vision_ocr import extract_text_from_pdf_bytes
+        return extract_text_from_pdf_bytes(file_bytes, "uploaded.pdf")
+    except Exception as exc:
+        print(f"[OCR] Vision fallback failed: {exc}")
+        return ""
