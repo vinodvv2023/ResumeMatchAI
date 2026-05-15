@@ -17,12 +17,17 @@ def extract_text_from_pdf_bytes(file_bytes: bytes, filename: str) -> str:
     if ext == ".pdf":
         from pdf2image import convert_from_bytes
         pages = convert_from_bytes(file_bytes, dpi=300)
+        print(f"[OCR] pdf2image converted {len(pages)} pages")
         for img in pages:
             buf = io.BytesIO()
             img.save(buf, format="PNG")
+            img_size = buf.tell()
             images_b64.append(base64.b64encode(buf.getvalue()).decode("ascii"))
+            print(f"[OCR] page image size: {img_size} bytes")
     else:
         images_b64.append(base64.b64encode(file_bytes).decode("ascii"))
+
+    print(f"[OCR] Vision model: {VISION_MODEL}, pages to process: {len(images_b64)}")
 
     client = OpenAI(
         api_key=DEEPINFRA_API_TOKEN,
@@ -52,7 +57,7 @@ def extract_text_from_pdf_bytes(file_bytes: bytes, filename: str) -> str:
             if text:
                 all_text.append(text.strip())
         except Exception as e:
-            print(f"[OCR] Vision model page {i+1} error: {e}")
+            print(f"[OCR] Vision model page {i+1} error: {type(e).__name__}: {e}")
             continue
 
     return "\n".join(all_text)

@@ -123,7 +123,7 @@ def _parse_pdf(file_bytes: bytes) -> dict[str, Any]:
             text = _pdf_ocr(file_bytes)
             print(f"[OCR] OCR result length: {len(text)} chars")
             if len(text) < 100:
-                print(f"[OCR] Tesseract OCR insufficient, falling back to Google Cloud Vision")
+                print(f"[OCR] Tesseract OCR insufficient, falling back to DeepInfra Vision")
                 text = _vision_ocr_fallback(file_bytes)
                 print(f"[OCR] Vision OCR result length: {len(text)} chars")
     except Exception as exc:
