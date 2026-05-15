@@ -37,8 +37,9 @@ def get_registry(db: Session = Depends(get_db)):
         elif structured_data:
             try:
                 data = json.loads(structured_data)
-                candidate_name = data.get("name", "Unknown")
-                email = data.get("email")
+                contact = data.get("contact", {}) if isinstance(data.get("contact"), {}) else {}
+                candidate_name = contact.get("name") or data.get("name", "Unknown")
+                email = contact.get("email") or data.get("email")
             except:
                 pass
                 
