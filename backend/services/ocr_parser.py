@@ -119,8 +119,9 @@ def _parse_pdf(file_bytes: bytes) -> dict[str, Any]:
 
         # If very little text was extracted, fall back to OCR
         if len(text) < 100:
-            logger.info("Digital PDF text too short, falling back to OCR")
+            print(f"[OCR] Digital text too short ({len(text)} chars), falling back to OCR")
             text = _pdf_ocr(file_bytes)
+            print(f"[OCR] OCR result length: {len(text)} chars")
     except Exception as exc:
         logger.warning("pdfplumber failed (%s), trying OCR", exc)
         text = _pdf_ocr(file_bytes)
@@ -150,10 +151,10 @@ def _pdf_ocr(file_bytes: bytes) -> str:
 
         return "\n".join(parts)
     except ImportError as e:
-        logger.error("OCR dependencies missing: %s", e)
+        print(f"[OCR] ERROR dependencies missing: {e}")
         return ""
     except Exception as exc:
-        logger.error("OCR failed: %s", exc)
+        print(f"[OCR] ERROR failed: {exc}")
         return ""
 
 
