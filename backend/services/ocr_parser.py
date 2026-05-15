@@ -103,6 +103,8 @@ def parse_file(file_bytes: bytes, filename: str) -> dict[str, Any]:
 def _parse_pdf(file_bytes: bytes) -> dict[str, Any]:
     import pdfplumber
 
+    print(f"[OCR] _parse_pdf received {len(file_bytes)} bytes, first 20 bytes hex: {file_bytes[:20].hex()}")
+
     links = []
     try:
         with pdfplumber.open(io.BytesIO(file_bytes)) as pdf:
@@ -145,6 +147,7 @@ def _pdf_ocr(file_bytes: bytes) -> str:
         from PIL import Image
 
         images = convert_from_bytes(file_bytes, dpi=300)
+        print(f"[OCR] pdf2image produced {len(images)} pages")
         parts: list[str] = []
 
         for img in images:
