@@ -132,10 +132,13 @@ def _parse_pdf(file_bytes: bytes) -> dict[str, Any]:
             for page in pdf.pages:
                 page_text = page.extract_text() or ""
                 text += page_text + "\n"
-            for page in pdf.pages:
-                if page.links:
-                    for link in page.links:
-                        links.append(link.get("uri", ""))
+                try:
+                    if hasattr(page, 'links') and page.links:
+                        for link in page.links:
+                            if isinstance(link, dict) and link.get("uri"):
+                                links.append(link["uri"])
+                except Exception:
+                    pass
         text = text.strip()
         print(f"[OCR] pdfplumber extracted {len(text)} chars")
     except Exception as exc:
