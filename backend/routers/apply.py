@@ -52,21 +52,19 @@ async def upload_resume(token: str, file: UploadFile = File(...), db: Session = 
         raise HTTPException(status_code=404, detail="Job not found")
 
     # 2. Save File to Disk
-    import shutil
     upload_dir = "backend/uploads/resumes"
     os.makedirs(upload_dir, exist_ok=True)
     
     resume_id = str(uuid.uuid4()).replace("-", "")
     file_path = f"{upload_dir}/{resume_id}_{file.filename}"
     
+    file_bytes = await file.read()
+
     with open(file_path, "wb") as buffer:
-        file.file.seek(0)
-        shutil.copyfileobj(file.file, buffer)
+        buffer.write(file_bytes)
 
     # 3. Parse and Extract
     try:
-        file.file.seek(0)
-        file_bytes = await file.read()
         blocks = parse_file(file_bytes, file.filename or "unknown.pdf")
         structured_data = extract_structured(blocks)
     except Exception as e:
