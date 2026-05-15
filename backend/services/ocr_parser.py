@@ -125,9 +125,9 @@ def _parse_pdf(file_bytes: bytes) -> dict[str, Any]:
             text = _pdf_ocr(file_bytes)
             print(f"[OCR] OCR result length: {len(text)} chars")
             if len(text) < 100:
-                print(f"[OCR] Tesseract OCR insufficient, falling back to DeepInfra Vision")
-                text = _vision_ocr_fallback(file_bytes)
-                print(f"[OCR] Vision OCR result length: {len(text)} chars")
+        print(f"[OCR] Tesseract OCR insufficient, falling back to DeepInfra Vision ({VISION_MODEL})")
+            text = _vision_ocr_fallback(file_bytes)
+            print(f"[OCR] Vision OCR result length: {len(text)} chars")
     except Exception as exc:
         print(f"[OCR] pdfplumber failed ({exc}), trying OCR + Vision fallback")
         text = _pdf_ocr(file_bytes)
@@ -308,10 +308,10 @@ def _extract_contact(raw_text: str, existing: list[str]) -> list[str]:
 
 
 def _vision_ocr_fallback(file_bytes: bytes) -> str:
-    """Use Google Cloud Vision API when Tesseract fails."""
+    """Use DeepInfra multimodal model when Tesseract fails."""
     try:
         from backend.services.vision_ocr import extract_text_from_pdf_bytes
         return extract_text_from_pdf_bytes(file_bytes, "uploaded.pdf")
     except Exception as exc:
-        print(f"[OCR] Vision fallback failed: {exc}")
+        print(f"[OCR] Vision fallback failed: {type(exc).__name__}: {exc}")
         return ""
