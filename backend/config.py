@@ -9,7 +9,7 @@ DATABASE_URL  = os.getenv("DATABASE_URL", f"sqlite:///{DATABASE_PATH}")
 
 # LLM Configuration
 DEEPINFRA_API_TOKEN = os.getenv("DEEPINFRA_API_TOKEN")
-VISION_MODEL = os.getenv("VISION_MODEL", "Qwen/Qwen2.5-VL-7B-Instruct")
+VISION_MODEL = os.getenv("VISION_MODEL", "meta-llama/Llama-3.2-11B-Vision-Instruct")
 AGENT_DEEPINFRA_MODEL = os.getenv("AGENT_DEEPINFRA_MODEL", "deepseek-ai/DeepSeek-V3")
 
 BASE_URL          = os.getenv("BASE_URL", "http://localhost:8000")
