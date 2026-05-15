@@ -22,6 +22,8 @@ import re
 from pathlib import Path
 from typing import Any
 
+from backend.config import VISION_MODEL
+
 logger = logging.getLogger(__name__)
 
 # ── Section Header Patterns ──────────────────────────────────────────────────
