@@ -2,7 +2,7 @@ import base64
 import io
 from pathlib import Path
 
-from openai import OpenAI
+import httpx
 
 from backend.config import DEEPINFRA_API_TOKEN, VISION_MODEL
 
@@ -21,41 +21,50 @@ def extract_text_from_pdf_bytes(file_bytes: bytes, filename: str) -> str:
         for img in pages:
             buf = io.BytesIO()
             img.save(buf, format="PNG")
-            img_size = buf.tell()
             images_b64.append(base64.b64encode(buf.getvalue()).decode("ascii"))
-            print(f"[OCR] page image size: {img_size} bytes")
+            print(f"[OCR] page image size: {buf.tell()} bytes")
     else:
         images_b64.append(base64.b64encode(file_bytes).decode("ascii"))
 
-    print(f"[OCR] Vision model: {VISION_MODEL}, pages to process: {len(images_b64)}")
-
-    client = OpenAI(
-        api_key=DEEPINFRA_API_TOKEN,
-        base_url="https://api.deepinfra.com/v1/openai",
-    )
+    api_url = "https://api.deepinfra.com/v1/openai/chat/completions"
+    headers = {
+        "Authorization": f"Bearer {DEEPINFRA_API_TOKEN}",
+        "Content-Type": "application/json",
+    }
 
     all_text = []
     for i, img_b64 in enumerate(images_b64):
+        payload = {
+            "model": VISION_MODEL,
+            "max_tokens": 4092,
+            "temperature": 0.0,
+            "messages": [
+                {
+                    "role": "user",
+                    "content": [
+                        {
+                            "type": "image",
+                            "image": f"data:image/png;base64,{img_b64}",
+                        },
+                        {
+                            "type": "text",
+                            "text": "Extract ALL text from this document page exactly as written. Preserve formatting, line breaks, and structure. Output only the extracted text, nothing else.",
+                        },
+                    ],
+                },
+            ],
+        }
+
         try:
-            response = client.chat.completions.create(
-                model=VISION_MODEL,
-                messages=[
-                    {
-                        "role": "system",
-                        "content": "Extract ALL text from this document page exactly as written. Preserve formatting, line breaks, and structure. Output only the extracted text, nothing else.",
-                    },
-                    {
-                        "role": "user",
-                        "content": [
-                            {"type": "image_url", "image_url": {"url": f"data:image/png;base64,{img_b64}"}},
-                        ],
-                    },
-                ],
-                temperature=0.0,
-            )
-            text = response.choices[0].message.content
+            resp = httpx.post(api_url, json=payload, headers=headers, timeout=60)
+            if resp.status_code != 200:
+                print(f"[OCR] Vision API page {i+1} error {resp.status_code}: {resp.text[:300]}")
+                continue
+            result = resp.json()
+            choice = result["choices"][0]
+            text = choice.get("message", {}).get("content", "")
             if i == 0:
-                print(f"[OCR] Vision API response: finish_reason={response.choices[0].finish_reason}, content_len={len(text or '')}")
+                print(f"[OCR] Vision API response: finish_reason={choice.get('finish_reason')}, content_len={len(text)}")
             if text:
                 all_text.append(text.strip())
         except Exception as e:
