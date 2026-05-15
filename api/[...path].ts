@@ -32,9 +32,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     headers['X-Blaxel-Workspace'] = ws;
   }
 
-  let body: Buffer | string | undefined;
+  let body: Uint8Array | string | undefined;
   if (['POST', 'PUT', 'PATCH'].includes(req.method || '')) {
-    body = await getRawBody(req as unknown as import('stream').Readable);
+    const raw = await getRawBody(req as unknown as import('stream').Readable);
+    body = new Uint8Array(raw);
+    headers['Content-Length'] = String(raw.length);
   }
 
   try {

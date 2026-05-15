@@ -90,6 +90,9 @@ async def upload_resume(token: str, file: UploadFile = File(...), db: Session = 
     db.flush() # Ensure resume exists in DB before linking match_result
     
     # 5. Calculate Match Score
+    if len(raw_text.strip()) < 50:
+        raise HTTPException(status_code=422, detail="Could not extract text from resume. Please upload a different file format (PDF, DOCX, or TXT).")
+    
     match_result = calculate_match(
         job_description=job.description,
         sections=blocks,
