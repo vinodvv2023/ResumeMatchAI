@@ -2,6 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.responses import FileResponse
 from sqlalchemy.orm import Session
 import uuid
+import json
 import os
 
 from backend.database import get_db
@@ -26,6 +27,9 @@ def get_registry(db: Session = Depends(get_db)):
     for match, job_title, app, structured_data, raw_text, filename in query:
         candidate_name = "Unknown"
         email = None
+        matched = json.loads(match.matched_skills) if match.matched_skills else []
+        missing = json.loads(match.missing_skills) if match.missing_skills else []
+        print(f"[REGISTRY] candidate={candidate_name}, score={match.score}, matched={matched}, missing={missing}")
         
         if app:
             candidate_name = app.name
