@@ -11,51 +11,45 @@ export const config = {
   },
 };
 
-function getRawBody(req: import('stream').Readable): Promise<Buffer> {
-  return new Promise((resolve, reject) => {
-    const chunks: Buffer[] = [];
-    let totalSize = 0;
-    req.on('data', (chunk: Buffer) => {
-      chunks.push(chunk);
-      totalSize += chunk.length;
-    });
-    req.on('end', () => resolve(Buffer.concat(chunks)));
-    req.on('error', reject);
-  });
-}
-
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   const incomingPath = req.url || '/';
   const stripped = incomingPath.replace(/^\/api\/?/, '');
   const url = `${backendUrl}/${stripped}`;
 
-  const ct = req.headers['content-type'] || '';
-  const fwdHeaders: Record<string, string> = { Accept: 'application/json' };
-  if (ct) fwdHeaders['Content-Type'] = ct;
+  const fwdHeaders: Record<string, string> = {};
+  for (const [key, value] of Object.entries(req.headers)) {
+    if (typeof value === 'string' && !['host', 'connection', 'transfer-encoding', 'content-length'].includes(key)) {
+      fwdHeaders[key] = value;
+    }
+  }
+  fwdHeaders['Accept'] = 'application/json';
   if (ak && ws) {
-    fwdHeaders['X-Blaxel-Authorization'] = `Bearer ${ak}`;
-    fwdHeaders['X-Blaxel-Workspace'] = ws;
+    fwdHeaders['x-blaxel-authorization'] = `Bearer ${ak}`;
+    fwdHeaders['x-blaxel-workspace'] = ws;
   }
 
-  let rawBody: Buffer | undefined;
-  if (['POST', 'PUT', 'PATCH'].includes(req.method || '')) {
-    rawBody = await getRawBody(req as unknown as import('stream').Readable);
-    console.log(`[PROXY] ${req.method} ${url} ct=${ct} body_size=${rawBody.length} first_bytes=${rawBody.slice(0, 10).toString('hex')}`);
-    fwdHeaders['Content-Length'] = String(rawBody.length);
+  const chunks: Buffer[] = [];
+  let bodySize = 0;
+  for await (const chunk of req as unknown as AsyncIterable<Buffer>) {
+    chunks.push(chunk);
+    bodySize += chunk.length;
+  }
+  const rawBody = Buffer.concat(chunks);
+
+  if (bodySize > 0) {
+    fwdHeaders['content-length'] = String(bodySize);
   }
 
   try {
     const fetchRes = await fetch(url, {
       method: req.method || 'GET',
       headers: fwdHeaders,
-      body: rawBody,
+      body: bodySize > 0 ? rawBody.buffer as ArrayBuffer : undefined,
       redirect: 'follow',
     });
     const data = await fetchRes.text();
-    console.log(`[PROXY] response ${fetchRes.status} body_len=${data.length}`);
     res.status(fetchRes.status).setHeader('Content-Type', fetchRes.headers.get('content-type') || 'application/json').send(data);
   } catch (err: unknown) {
-    console.log(`[PROXY] error ${err}`);
     res.status(502).json({ error: String(err) });
   }
 }
