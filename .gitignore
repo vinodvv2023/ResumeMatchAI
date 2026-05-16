@@ -12,3 +12,5 @@ dist/
 graphify-out/
 uploads/
 token.txt
+blaxel.yaml
+blaxel.toml
