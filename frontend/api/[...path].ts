@@ -25,8 +25,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   const url = `${backendUrl}/${stripped}`;
 
   const ct = req.headers['content-type'] || '';
+  const auth = req.headers['authorization'] || '';
   const headers: Record<string, string> = { Accept: 'application/json' };
   if (ct) headers['Content-Type'] = ct;
+  if (auth) headers['Authorization'] = auth;
   if (ak && ws) {
     headers['X-Blaxel-Authorization'] = `Bearer ${ak}`;
     headers['X-Blaxel-Workspace'] = ws;
