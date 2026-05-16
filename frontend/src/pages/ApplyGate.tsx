@@ -3,6 +3,7 @@ import { useParams } from 'react-router-dom';
 import { ShieldAlert, FileUp, Loader2, CheckCircle2, XCircle, ChevronRight } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import api from '../lib/api';
+import axios from 'axios';
 import type { TokenInfo, MatchResult } from '../types';
 
 export default function ApplyGate() {
@@ -63,10 +64,22 @@ export default function ApplyGate() {
     const formData = new FormData();
     formData.append('file', file);
     
+    const directUrl = import.meta.env.VITE_API_URL
+      ? `${import.meta.env.VITE_API_URL}/apply/${token}/upload`
+      : null;
+
+    const uploadHeaders: Record<string, string> = { 'Content-Type': 'multipart/form-data' };
+    if (import.meta.env.VITE_BLAXEL_API_KEY) {
+      uploadHeaders['X-Blaxel-Authorization'] = `Bearer ${import.meta.env.VITE_BLAXEL_API_KEY}`;
+    }
+    if (import.meta.env.VITE_BLAXEL_WORKSPACE) {
+      uploadHeaders['X-Blaxel-Workspace'] = import.meta.env.VITE_BLAXEL_WORKSPACE;
+    }
+
     try {
-      const response = await api.post<MatchResult>(`/apply/${token}/upload`, formData, {
-        headers: { 'Content-Type': 'multipart/form-data' }
-      });
+      const response = directUrl
+        ? await axios.post<MatchResult>(directUrl, formData, { headers: uploadHeaders })
+        : await api.post<MatchResult>(`/apply/${token}/upload`, formData, { headers: uploadHeaders });
       setResult(response.data);
       
       // Auto-prefill form from extracted data
