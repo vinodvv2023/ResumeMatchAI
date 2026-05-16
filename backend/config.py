@@ -17,6 +17,10 @@ FRONTEND_URL      = os.getenv("FRONTEND_URL", "http://localhost:5173")
 PASS_THRESHOLD    = int(os.getenv("PASS_THRESHOLD", "60"))
 TOKEN_EXPIRY_DAYS = int(os.getenv("TOKEN_EXPIRY_DAYS", "7"))
 
+JWT_SECRET_KEY = os.getenv("JWT_SECRET_KEY", "resumematch-dev-secret-change-in-production")
+JWT_ALGORITHM = "HS256"
+JWT_EXPIRE_MINUTES = int(os.getenv("JWT_EXPIRE_MINUTES", "1440"))
+
 UPLOAD_DIR = Path("uploads")
 UPLOAD_DIR.mkdir(exist_ok=True)
 

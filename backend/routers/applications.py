@@ -6,30 +6,31 @@ import json
 import os
 
 from backend.database import get_db
-from backend.models import MatchResult, Application, Job, Resume
+from backend.models import MatchResult, Application, Job, Resume, ShareToken, User
 from backend.schemas import ApplicationCreate, ApplicationOut, RegistryEntry, BulkDelete
+from backend.services.magic_link import generate_magic_link
+from backend.routers.auth import get_current_user
 from typing import List
-import json
 
 router = APIRouter(prefix="/applications", tags=["Applications"])
 
 @router.get("/registry", response_model=List[RegistryEntry])
-def get_registry(db: Session = Depends(get_db)):
-    """Get a full registry of all processed resumes and scores."""
-    query = db.query(MatchResult, Job.title, Application, Resume.structured_data, Resume.raw_text, Resume.filename)\
-        .join(Job, MatchResult.job_id == Job.id)\
-        .join(Resume, MatchResult.resume_id == Resume.id)\
-        .outerjoin(Application, MatchResult.id == Application.match_id)\
-        .order_by(MatchResult.created_at.desc())\
-        .all()
+def get_registry(db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    query = db.query(
+        MatchResult, Job.title, Application, Resume.structured_data,
+        Resume.raw_text, Resume.filename, ShareToken.token
+    ).join(Job, MatchResult.job_id == Job.id)\
+     .join(Resume, MatchResult.resume_id == Resume.id)\
+     .join(ShareToken, Resume.token == ShareToken.token)\
+     .outerjoin(Application, MatchResult.id == Application.match_id)\
+     .filter(Job.user_id == current_user.id)\
+     .order_by(MatchResult.created_at.desc())\
+     .all()
     
     registry = []
-    for match, job_title, app, structured_data, raw_text, filename in query:
+    for match, job_title, app, structured_data, raw_text, filename, share_token in query:
         candidate_name = "Unknown"
         email = None
-        matched = json.loads(match.matched_skills) if match.matched_skills else []
-        missing = json.loads(match.missing_skills) if match.missing_skills else []
-        print(f"[REGISTRY] candidate={candidate_name}, score={match.score}, matched={matched}, missing={missing}")
         
         if app:
             candidate_name = app.name
@@ -56,7 +57,8 @@ def get_registry(db: Session = Depends(get_db)):
             resume_text=raw_text,
             cover_letter=app.cover_letter if app else None,
             resume_id=match.resume_id,
-            filename=filename
+            filename=filename,
+            magic_link=generate_magic_link(share_token) if share_token else None,
         ))
         
     return registry
@@ -64,8 +66,6 @@ def get_registry(db: Session = Depends(get_db)):
 
 @router.post("", response_model=ApplicationOut)
 def submit_application(app_in: ApplicationCreate, db: Session = Depends(get_db)):
-    """Submit application form (only allowed if match passed)."""
-    # 1. Verify match result exists and passed
     match = db.query(MatchResult).filter(MatchResult.id == app_in.match_id).first()
     
     if not match:
@@ -74,12 +74,10 @@ def submit_application(app_in: ApplicationCreate, db: Session = Depends(get_db))
     if not match.passed:
         raise HTTPException(status_code=403, detail="Cannot submit application for failed match")
         
-    # 2. Check if already applied
     existing = db.query(Application).filter(Application.match_id == app_in.match_id).first()
     if existing:
         raise HTTPException(status_code=400, detail="Application already submitted for this match")
         
-    # 3. Create application
     app_id = str(uuid.uuid4()).replace("-", "")
     db_app = Application(
         id=app_id,
@@ -100,10 +98,13 @@ def submit_application(app_in: ApplicationCreate, db: Session = Depends(get_db))
 
 
 @router.delete("/{match_id}", status_code=status.HTTP_204_NO_CONTENT)
-def delete_application(match_id: str, db: Session = Depends(get_db)):
-    """Delete a match result (registry entry) and its associated application."""
+def delete_application(match_id: str, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     match = db.query(MatchResult).filter(MatchResult.id == match_id).first()
     if not match:
+        raise HTTPException(status_code=404, detail="Match result not found")
+    
+    job = db.query(Job).filter(Job.id == match.job_id).first()
+    if not job or job.user_id != current_user.id:
         raise HTTPException(status_code=404, detail="Match result not found")
     
     resume = db.query(Resume).filter(Resume.id == match.resume_id).first()
@@ -117,9 +118,12 @@ def delete_application(match_id: str, db: Session = Depends(get_db)):
 
 
 @router.post("/bulk-delete", status_code=status.HTTP_204_NO_CONTENT)
-def bulk_delete_applications(data: BulkDelete, db: Session = Depends(get_db)):
-    """Delete multiple match results and their associated applications."""
-    matches = db.query(MatchResult).filter(MatchResult.id.in_(data.ids)).all()
+def bulk_delete_applications(data: BulkDelete, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    user_job_ids = [j.id for j in db.query(Job.id).filter(Job.user_id == current_user.id).all()]
+    matches = db.query(MatchResult).filter(
+        MatchResult.id.in_(data.ids),
+        MatchResult.job_id.in_(user_job_ids),
+    ).all()
     for match in matches:
         resume = db.query(Resume).filter(Resume.id == match.resume_id).first()
         if resume and resume.file_path and os.path.exists(resume.file_path):
@@ -132,16 +136,21 @@ def bulk_delete_applications(data: BulkDelete, db: Session = Depends(get_db)):
 
 
 @router.get("/resume/{resume_id}/file")
-def get_resume_file(resume_id: str, db: Session = Depends(get_db)):
-    """Serve the original uploaded resume file."""
+def get_resume_file(resume_id: str, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     resume = db.query(Resume).filter(Resume.id == resume_id).first()
     if not resume or not resume.file_path:
         raise HTTPException(status_code=404, detail="Resume file not found")
     
+    match = db.query(MatchResult).filter(MatchResult.resume_id == resume.id).first()
+    if not match:
+        raise HTTPException(status_code=404, detail="Resume file not found")
+    job = db.query(Job).filter(Job.id == match.job_id).first()
+    if not job or job.user_id != current_user.id:
+        raise HTTPException(status_code=403, detail="Not authorized")
+    
     if not os.path.exists(resume.file_path):
         raise HTTPException(status_code=404, detail="File missing on server")
         
-    # Determine media type based on filename
     media_type = "application/octet-stream"
     if resume.filename:
         ext = resume.filename.lower()

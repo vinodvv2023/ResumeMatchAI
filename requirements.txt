@@ -18,3 +18,5 @@ numpy
 psycopg2-binary
 openai
 httpx
+bcrypt
+PyJWT

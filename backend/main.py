@@ -31,7 +31,8 @@ except Exception as e:
     print(f"ERROR: DB init failed: {str(e)}")
 
 # Include routers AFTER app and DB are set up
-from backend.routers import jobs, apply, applications
+from backend.routers import jobs, apply, applications, auth
+app.include_router(auth.router)
 app.include_router(jobs.router)
 app.include_router(apply.router)
 app.include_router(applications.router)

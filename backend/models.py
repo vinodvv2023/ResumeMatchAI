@@ -3,10 +3,20 @@ from sqlalchemy import Boolean, Column, DateTime, ForeignKey, Integer, String, T
 from backend.database import Base
 
 
+class User(Base):
+    __tablename__ = "users"
+
+    id         = Column(String, primary_key=True)
+    email      = Column(String, unique=True, nullable=False, index=True)
+    hashed_password = Column(String, nullable=False)
+    created_at = Column(String, nullable=False, default=lambda: datetime.utcnow().isoformat())
+
+
 class Job(Base):
     __tablename__ = "jobs"
 
     id          = Column(String, primary_key=True)
+    user_id     = Column(String, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
     title       = Column(String, nullable=False)
     description = Column(Text, nullable=False)
     threshold   = Column(Integer, nullable=False, default=60)

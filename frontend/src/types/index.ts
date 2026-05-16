@@ -1,3 +1,15 @@
+export interface User {
+  id: string;
+  email: string;
+  created_at: string;
+}
+
+export interface TokenResponse {
+  access_token: string;
+  token_type: string;
+  user: User;
+}
+
 export interface Job {
   id: string;
   title: string;
@@ -60,4 +72,5 @@ export interface RegistryEntry {
   cover_letter?: string;
   resume_id?: string;
   filename?: string;
+  magic_link?: string;
 }

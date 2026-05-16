@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { ArrowLeft, User, Mail, Calendar, CheckCircle, XCircle, FileText, Search, Trash2, FileUp } from 'lucide-react';
+import { ArrowLeft, User, Mail, Calendar, CheckCircle, XCircle, FileText, Search, Trash2, FileUp, Copy, CheckCircle2 } from 'lucide-react';
 import api from '../lib/api';
 import type { RegistryEntry } from '../types';
 
@@ -13,6 +13,7 @@ export default function Registry() {
   
   // Modal state
   const [detailEntry, setDetailEntry] = useState<RegistryEntry | null>(null);
+  const [copiedLink, setCopiedLink] = useState<string | null>(null);
 
   useEffect(() => {
     fetchRegistry();
@@ -147,13 +148,14 @@ export default function Registry() {
                 <th className="p-4 font-semibold text-slate-300">Score</th>
                 <th className="p-4 font-semibold text-slate-300">Status</th>
                 <th className="p-4 font-semibold text-slate-300">Date</th>
+                <th className="p-4 font-semibold text-slate-300">Magic Link</th>
                 <th className="p-4 font-semibold text-slate-300 text-right">Actions</th>
               </tr>
             </thead>
             <tbody>
               {filteredRegistry.length === 0 ? (
                 <tr>
-                  <td colSpan={7} className="p-8 text-center text-slate-400">
+                  <td colSpan={8} className="p-8 text-center text-slate-400">
                     {searchTerm ? 'No results found for your search.' : 'No processing history found.'}
                   </td>
                 </tr>
@@ -213,6 +215,24 @@ export default function Registry() {
                         <Calendar size={14} />
                         {new Date(entry.created_at).toLocaleDateString()}
                       </div>
+                    </td>
+                    <td className="p-4">
+                      {entry.magic_link ? (
+                        <button
+                          onClick={() => {
+                            navigator.clipboard.writeText(entry.magic_link!);
+                            setCopiedLink(entry.id);
+                            setTimeout(() => setCopiedLink(null), 2000);
+                          }}
+                          className="flex items-center gap-1.5 text-xs text-violet-400 hover:text-violet-300 transition-colors"
+                          title={entry.magic_link}
+                        >
+                          {copiedLink === entry.id ? <CheckCircle2 size={14} className="text-green-400" /> : <Copy size={14} />}
+                          <span className="truncate max-w-[140px]">{entry.magic_link}</span>
+                        </button>
+                      ) : (
+                        <span className="text-slate-500 text-sm">—</span>
+                      )}
                     </td>
                     <td className="p-4 text-right">
                       <div className="flex items-center justify-end gap-1">

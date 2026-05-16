@@ -2,6 +2,37 @@ from typing import List, Optional
 from pydantic import BaseModel, EmailStr, Field
 
 
+# ── Auth ─────────────────────────────────────────────────────────────────────
+
+class UserRegister(BaseModel):
+    email:    str = Field(..., min_length=5)
+    password: str = Field(..., min_length=6)
+
+
+class UserLogin(BaseModel):
+    email:    str = Field(..., min_length=5)
+    password: str = Field(..., min_length=6)
+
+
+class UserOut(BaseModel):
+    id:         str
+    email:      str
+    created_at: str
+
+    model_config = {"from_attributes": True}
+
+
+class TokenOut(BaseModel):
+    access_token: str
+    token_type:   str = "bearer"
+    user:         UserOut
+
+
+class ChangePassword(BaseModel):
+    current_password: str = Field(..., min_length=6)
+    new_password:     str = Field(..., min_length=6)
+
+
 # ── Jobs ────────────────────────────────────────────────────────────────────
 
 class JobCreate(BaseModel):
@@ -93,6 +124,7 @@ class RegistryEntry(BaseModel):
     cover_letter: Optional[str] = None
     resume_id:    Optional[str] = None
     filename:     Optional[str] = None
+    magic_link:   Optional[str] = None
 
 
 # ── Admin Stats ──────────────────────────────────────────────────────────────

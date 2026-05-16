@@ -5,27 +5,27 @@ import uuid
 import datetime
 
 from backend.database import get_db
-from backend.models import Job, ShareToken, MatchResult, Application, Resume
+from backend.models import Job, ShareToken, MatchResult, Application, Resume, User
 from backend.schemas import JobCreate, JobOut, JobUpdate
 from backend.services.magic_link import generate_token, generate_magic_link, get_expiry
 from backend.config import PASS_THRESHOLD
+from backend.routers.auth import get_current_user
 
 router = APIRouter(prefix="/jobs", tags=["Jobs"])
 
 @router.post("", response_model=JobOut)
-def create_job(job_in: JobCreate, db: Session = Depends(get_db)):
+def create_job(job_in: JobCreate, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     job_id = str(uuid.uuid4()).replace("-", "")
     
-    # Create Job
     db_job = Job(
         id=job_id,
+        user_id=current_user.id,
         title=job_in.title,
         description=job_in.description,
         threshold=job_in.threshold
     )
     db.add(db_job)
     
-    # Generate associated Magic Link Token
     token_str = generate_token()
     db_token = ShareToken(
         token=token_str,
@@ -37,7 +37,6 @@ def create_job(job_in: JobCreate, db: Session = Depends(get_db)):
     db.commit()
     db.refresh(db_job)
     
-    # Return Job with Magic Link
     return JobOut(
         id=db_job.id,
         title=db_job.title,
@@ -50,18 +49,16 @@ def create_job(job_in: JobCreate, db: Session = Depends(get_db)):
     )
 
 @router.get("", response_model=List[JobOut])
-def list_jobs(db: Session = Depends(get_db)):
-    jobs = db.query(Job).order_by(Job.created_at.desc()).all()
+def list_jobs(db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    jobs = db.query(Job).filter(Job.user_id == current_user.id).order_by(Job.created_at.desc()).all()
     results = []
     
     for job in jobs:
-        # Get active token
         token_obj = db.query(ShareToken).filter(
             ShareToken.job_id == job.id, 
             ShareToken.revoked == 0
         ).order_by(ShareToken.created_at.desc()).first()
         
-        # Get latest score
         latest_match = db.query(MatchResult).filter(
             MatchResult.job_id == job.id
         ).order_by(MatchResult.created_at.desc()).first()
@@ -78,8 +75,8 @@ def list_jobs(db: Session = Depends(get_db)):
     return results
 
 @router.get("/{job_id}", response_model=JobOut)
-def get_job(job_id: str, db: Session = Depends(get_db)):
-    job = db.query(Job).filter(Job.id == job_id).first()
+def get_job(job_id: str, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    job = db.query(Job).filter(Job.id == job_id, Job.user_id == current_user.id).first()
     if not job:
         raise HTTPException(status_code=404, detail="Job not found")
         
@@ -97,8 +94,8 @@ def get_job(job_id: str, db: Session = Depends(get_db)):
 
 
 @router.put("/{job_id}", response_model=JobOut)
-def update_job(job_id: str, job_in: JobUpdate, db: Session = Depends(get_db)):
-    db_job = db.query(Job).filter(Job.id == job_id).first()
+def update_job(job_id: str, job_in: JobUpdate, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    db_job = db.query(Job).filter(Job.id == job_id, Job.user_id == current_user.id).first()
     if not db_job:
         raise HTTPException(status_code=404, detail="Job not found")
         
@@ -109,11 +106,11 @@ def update_job(job_id: str, job_in: JobUpdate, db: Session = Depends(get_db)):
     db.commit()
     db.refresh(db_job)
     
-    return get_job(job_id, db)
+    return get_job(job_id, db, current_user)
 
 @router.delete("/{job_id}", status_code=status.HTTP_204_NO_CONTENT)
-def delete_job(job_id: str, db: Session = Depends(get_db)):
-    db_job = db.query(Job).filter(Job.id == job_id).first()
+def delete_job(job_id: str, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    db_job = db.query(Job).filter(Job.id == job_id, Job.user_id == current_user.id).first()
     if not db_job:
         raise HTTPException(status_code=404, detail="Job not found")
 
