@@ -14,14 +14,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   const ak = process.env.VITE_BLAXEL_API_KEY || '';
 
   const incomingPath = req.url || '/';
-  if (incomingPath.includes('debug')) {
-    return res.json({
-      backendUrl: process.env.VITE_API_URL || 'MISSING',
-      blaxelWorkspace: process.env.VITE_BLAXEL_WORKSPACE ? 'SET' : 'MISSING',
-      blaxelApiKey: process.env.VITE_BLAXEL_API_KEY ? 'SET' : 'MISSING',
-      jwtSecret: process.env.JWT_SECRET_KEY ? 'SET' : 'MISSING',
-    });
-  }
   const stripped = incomingPath.replace(/^\/api\/?/, '');
   const targetPath = `${backendUrl}/${stripped}`;
 
@@ -51,6 +43,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     method: req.method || 'GET',
     headers: fwdHeaders,
   }, (proxyRes) => {
+    res.setHeader('x-proxy-debug', `ak=${ak?'Y':'N'} ws=${ws?'Y':'N'} url=${backendUrl}`);
     res.status(proxyRes.statusCode || 502);
     for (const [key, value] of Object.entries(proxyRes.headers)) {
       if (typeof value === 'string') {
