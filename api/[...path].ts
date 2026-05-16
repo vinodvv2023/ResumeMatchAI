@@ -1,4 +1,5 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
+import https from 'https';
 
 const backendUrl = process.env.VITE_API_URL?.replace(/\/$/, "") || "http://localhost:8000";
 const ws = process.env.VITE_BLAXEL_WORKSPACE || '';
@@ -14,42 +15,45 @@ export const config = {
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   const incomingPath = req.url || '/';
   const stripped = incomingPath.replace(/^\/api\/?/, '');
-  const url = `${backendUrl}/${stripped}`;
+  const targetPath = `${backendUrl}/${stripped}`;
+
+  const parsedUrl = new URL(targetPath);
+  const isHttps = parsedUrl.protocol === 'https:';
+  const httpModule = isHttps ? https : (await import('http')).default;
 
   const fwdHeaders: Record<string, string> = {};
   for (const [key, value] of Object.entries(req.headers)) {
-    if (typeof value === 'string' && !['host', 'connection', 'transfer-encoding', 'content-length'].includes(key)) {
+    if (typeof value === 'string' && !['host', 'connection'].includes(key)) {
       fwdHeaders[key] = value;
     }
   }
-  fwdHeaders['Accept'] = 'application/json';
   if (ak && ws) {
     fwdHeaders['x-blaxel-authorization'] = `Bearer ${ak}`;
     fwdHeaders['x-blaxel-workspace'] = ws;
   }
 
-  const chunks: Buffer[] = [];
-  let bodySize = 0;
-  for await (const chunk of req as unknown as AsyncIterable<Buffer>) {
-    chunks.push(chunk);
-    bodySize += chunk.length;
-  }
-  const rawBody = Buffer.concat(chunks);
+  const proxyReq = httpModule.request({
+    hostname: parsedUrl.hostname,
+    port: parsedUrl.port || (isHttps ? 443 : 80),
+    path: parsedUrl.pathname + parsedUrl.search,
+    method: req.method || 'GET',
+    headers: fwdHeaders,
+  }, (proxyRes) => {
+    res.status(proxyRes.statusCode || 502);
+    for (const [key, value] of Object.entries(proxyRes.headers)) {
+      if (typeof value === 'string') {
+        res.setHeader(key, value);
+      } else if (Array.isArray(value)) {
+        res.setHeader(key, value.join(', '));
+      }
+    }
+    proxyRes.pipe(res);
+  });
 
-  if (bodySize > 0) {
-    fwdHeaders['content-length'] = String(bodySize);
-  }
-
-  try {
-    const fetchRes = await fetch(url, {
-      method: req.method || 'GET',
-      headers: fwdHeaders,
-      body: bodySize > 0 ? rawBody.buffer as ArrayBuffer : undefined,
-      redirect: 'follow',
-    });
-    const data = await fetchRes.text();
-    res.status(fetchRes.status).setHeader('Content-Type', fetchRes.headers.get('content-type') || 'application/json').send(data);
-  } catch (err: unknown) {
+  proxyReq.on('error', (err) => {
+    console.error(`[PROXY] error: ${err}`);
     res.status(502).json({ error: String(err) });
-  }
+  });
+
+  (req as unknown as import('stream').Readable).pipe(proxyReq);
 }
