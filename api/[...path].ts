@@ -33,6 +33,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     fwdHeaders['x-blaxel-authorization'] = `Bearer ${ak}`;
     fwdHeaders['x-blaxel-workspace'] = ws;
   }
+  console.log(`[PROXY] ak=${ak ? 'SET' : 'MISSING'} ws=${ws ? 'SET' : 'MISSING'} xfwd=${fwdHeaders['x-forwarded-authorization'] ? 'SET' : 'MISSING'} blauth=${fwdHeaders['x-blaxel-authorization'] ? 'SET' : 'MISSING'}`);
 
   const proxyReq = httpModule.request({
     hostname: parsedUrl.hostname,
