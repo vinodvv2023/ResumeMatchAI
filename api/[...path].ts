@@ -14,7 +14,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   const ak = process.env.VITE_BLAXEL_API_KEY || '';
 
   const incomingPath = req.url || '/';
-  if (incomingPath === '/debug' || incomingPath.startsWith('/debug')) {
+  if (incomingPath.includes('debug')) {
     return res.json({
       backendUrl: process.env.VITE_API_URL || 'MISSING',
       blaxelWorkspace: process.env.VITE_BLAXEL_WORKSPACE ? 'SET' : 'MISSING',
