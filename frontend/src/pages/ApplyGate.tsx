@@ -60,12 +60,15 @@ export default function ApplyGate() {
     setStep('processing');
     setError(null);
     
-    const formData = new FormData();
-    formData.append('file', file);
+    const arrayBuffer = await file.arrayBuffer();
+    const base64 = btoa(
+      new Uint8Array(arrayBuffer).reduce((data, byte) => data + String.fromCharCode(byte), '')
+    );
 
     try {
-      const response = await api.post<MatchResult>(`/apply/${token}/upload`, formData, {
-        headers: { 'Content-Type': 'multipart/form-data' }
+      const response = await api.post<MatchResult>(`/apply/${token}/upload-b64`, {
+        filename: file.name,
+        file_b64: base64,
       });
       setResult(response.data);
       

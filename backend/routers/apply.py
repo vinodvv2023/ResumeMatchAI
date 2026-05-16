@@ -1,8 +1,9 @@
-from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, status
+from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, status, Body
 from sqlalchemy.orm import Session
 import uuid
 import json
 import os
+import base64
 import logging
 
 logger = logging.getLogger(__name__)
@@ -44,7 +45,23 @@ def validate_token(token: str, db: Session = Depends(get_db)):
 
 @router.post("/{token}/upload", response_model=MatchOut)
 async def upload_resume(token: str, file: UploadFile = File(...), db: Session = Depends(get_db)):
-    """Process uploaded resume, run extraction and matching."""
+    """Process uploaded resume via multipart form."""
+    return await _process_upload(token, file.filename or "unknown.pdf", await file.read(), db)
+
+
+@router.post("/{token}/upload-b64", response_model=MatchOut)
+async def upload_resume_b64(token: str, payload: dict = Body(...), db: Session = Depends(get_db)):
+    """Process uploaded resume via base64 JSON (bypasses Vercel binary issues)."""
+    filename = payload.get("filename", "unknown.pdf")
+    file_b64 = payload.get("file_b64", "")
+    if not file_b64:
+        raise HTTPException(status_code=400, detail="No file data provided")
+    file_bytes = base64.b64decode(file_b64)
+    return await _process_upload(token, filename, file_bytes, db)
+
+
+async def _process_upload(token: str, filename: str, file_bytes: bytes, db: Session):
+    """Shared upload processing logic."""
     # 1. Validate Token
     db_token = db.query(ShareToken).filter(ShareToken.token == token).first()
     if not db_token or db_token.revoked or is_expired(db_token.expires_at):
@@ -59,17 +76,16 @@ async def upload_resume(token: str, file: UploadFile = File(...), db: Session = 
     os.makedirs(upload_dir, exist_ok=True)
     
     resume_id = str(uuid.uuid4()).replace("-", "")
-    file_path = f"{upload_dir}/{resume_id}_{file.filename}"
+    file_path = f"{upload_dir}/{resume_id}_{filename}"
     
-    file_bytes = await file.read()
-    print(f"[UPLOAD] file={file.filename}, size={len(file_bytes)} bytes")
+    print(f"[UPLOAD] file={filename}, size={len(file_bytes)} bytes")
 
     with open(file_path, "wb") as buffer:
         buffer.write(file_bytes)
 
     # 3. Parse and Extract
     try:
-        blocks = parse_file(file_bytes, file.filename or "unknown.pdf")
+        blocks = parse_file(file_bytes, filename)
         raw_text = blocks.get("raw_text", "")
         print(f"[UPLOAD] parsed: raw_text_len={len(raw_text)}, sections={list(blocks.keys())}")
         structured_data = extract_structured(blocks)
@@ -81,7 +97,7 @@ async def upload_resume(token: str, file: UploadFile = File(...), db: Session = 
     db_resume = Resume(
         id=resume_id,
         token=token,
-        filename=file.filename,
+        filename=filename,
         file_path=file_path,
         raw_text=blocks.get("raw_text", ""),
         structured_data=json.dumps(structured_data)
