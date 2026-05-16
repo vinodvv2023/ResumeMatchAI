@@ -1,10 +1,6 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import https from 'https';
 
-const backendUrl = process.env.VITE_API_URL?.replace(/\/$/, "") || "http://localhost:8000";
-const ws = process.env.VITE_BLAXEL_WORKSPACE || '';
-const ak = process.env.VITE_BLAXEL_API_KEY || '';
-
 export const config = {
   api: {
     bodyParser: false,
@@ -13,6 +9,10 @@ export const config = {
 };
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
+  const backendUrl = process.env.VITE_API_URL?.replace(/\/$/, "") || "http://localhost:8000";
+  const ws = process.env.VITE_BLAXEL_WORKSPACE || '';
+  const ak = process.env.VITE_BLAXEL_API_KEY || '';
+
   const incomingPath = req.url || '/';
   const stripped = incomingPath.replace(/^\/api\/?/, '');
   const targetPath = `${backendUrl}/${stripped}`;
@@ -33,6 +33,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     fwdHeaders['x-blaxel-authorization'] = `Bearer ${ak}`;
     fwdHeaders['x-blaxel-workspace'] = ws;
   }
+
   console.log(`[PROXY] ak=${ak ? 'SET' : 'MISSING'} ws=${ws ? 'SET' : 'MISSING'} xfwd=${fwdHeaders['x-forwarded-authorization'] ? 'SET' : 'MISSING'} blauth=${fwdHeaders['x-blaxel-authorization'] ? 'SET' : 'MISSING'}`);
 
   const proxyReq = httpModule.request({
