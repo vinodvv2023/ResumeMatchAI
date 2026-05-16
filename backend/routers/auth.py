@@ -1,5 +1,5 @@
 from datetime import datetime, timedelta
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Request, status
 from fastapi.security import OAuth2PasswordBearer
 from sqlalchemy.orm import Session
 import jwt
@@ -12,7 +12,7 @@ from backend.config import JWT_SECRET_KEY, JWT_ALGORITHM, JWT_EXPIRE_MINUTES
 import bcrypt
 
 router = APIRouter(prefix="/auth", tags=["Auth"])
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/login")
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/login", auto_error=False)
 
 
 def hash_password(password: str) -> str:
@@ -32,10 +32,22 @@ def create_access_token(user_id: str) -> str:
     )
 
 
+def _extract_token(request: Request) -> str | None:
+    forwarded = request.headers.get("x-forwarded-authorization", "")
+    if forwarded.startswith("Bearer "):
+        return forwarded[len("Bearer "):]
+    auth = request.headers.get("authorization", "")
+    if auth.startswith("Bearer "):
+        return auth[len("Bearer "):]
+    return None
+
+
 def get_current_user(
-    token: str = Depends(oauth2_scheme),
+    request: Request,
+    token: str | None = Depends(oauth2_scheme),
     db: Session = Depends(get_db),
 ) -> User:
+    token = token or _extract_token(request)
     credentials_exception = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
         detail="Invalid or expired token",

@@ -22,10 +22,14 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   const httpModule = isHttps ? https : (await import('http')).default;
 
   const fwdHeaders: Record<string, string> = {};
+  const authHeader = req.headers['authorization'];
   for (const [key, value] of Object.entries(req.headers)) {
-    if (typeof value === 'string' && !['host', 'connection'].includes(key)) {
+    if (typeof value === 'string' && !['host', 'connection', 'authorization'].includes(key)) {
       fwdHeaders[key] = value;
     }
+  }
+  if (typeof authHeader === 'string') {
+    fwdHeaders['x-forwarded-authorization'] = authHeader;
   }
   if (ak && ws) {
     fwdHeaders['x-blaxel-authorization'] = `Bearer ${ak}`;
