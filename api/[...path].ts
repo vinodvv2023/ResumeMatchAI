@@ -21,14 +21,18 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   const isHttps = parsedUrl.protocol === 'https:';
   const httpModule = isHttps ? https : (await import('http')).default;
 
+  const rawAuth = req.headers['authorization'];
+  const authValue = Array.isArray(rawAuth) ? rawAuth[0] : rawAuth;
+
   const fwdHeaders: Record<string, string> = {};
   for (const [key, value] of Object.entries(req.headers)) {
-    if (typeof value === 'string' && !['host', 'connection'].includes(key)) {
+    if (typeof value === 'string' && !['host', 'connection', 'authorization'].includes(key)) {
       fwdHeaders[key] = value;
     }
   }
-  fwdHeaders['x-forwarded-authorization'] = fwdHeaders['authorization'] || '';
-  delete fwdHeaders['authorization'];
+  if (authValue) {
+    fwdHeaders['x-forwarded-authorization'] = authValue;
+  }
   if (ak && ws) {
     fwdHeaders['x-blaxel-authorization'] = `Bearer ${ak}`;
     fwdHeaders['x-blaxel-workspace'] = ws;
