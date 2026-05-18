@@ -1,12 +1,9 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 
-const backendUrl = process.env.VITE_API_URL?.replace(/\/$/, "") || "http://localhost:8000";
-const ws = process.env.VITE_BLAXEL_WORKSPACE || '';
-const ak = process.env.VITE_BLAXEL_API_KEY || '';
-
 export const config = {
   api: {
     bodyParser: false,
+    bodySizeLimit: '10mb',
   },
 };
 
@@ -20,13 +17,21 @@ function getRawBody(req: import('stream').Readable): Promise<Buffer> {
 }
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
+  const backendUrl = process.env.VITE_API_URL?.replace(/\/$/, "") || "http://localhost:8000";
+  const ws = process.env.VITE_BLAXEL_WORKSPACE || '';
+  const ak = process.env.VITE_BLAXEL_API_KEY || '';
+
   const incomingPath = req.url || '/';
-  const stripped = incomingPath.replace(/^\/api\/?/, '');
+  const stripped = incomingPath.replace(/^\/api\/?/, '').split('?')[0];
   const url = `${backendUrl}/${stripped}`;
 
-  const ct = req.headers['content-type'] || '';
+  const rawAuth = req.headers['authorization'];
+  const authValue = Array.isArray(rawAuth) ? rawAuth[0] : rawAuth;
+
   const headers: Record<string, string> = { Accept: 'application/json' };
+  const ct = req.headers['content-type'] || '';
   if (ct) headers['Content-Type'] = ct;
+  if (authValue) headers['x-forwarded-authorization'] = authValue;
   if (ak && ws) {
     headers['X-Blaxel-Authorization'] = `Bearer ${ak}`;
     headers['X-Blaxel-Workspace'] = ws;
