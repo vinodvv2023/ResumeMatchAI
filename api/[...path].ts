@@ -16,7 +16,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   const incomingPath = req.url || '/';
   const cleanPath = incomingPath.replace(/^\/api\/?/, '');
 
-  if (cleanPath === 'debug') {
+  if (cleanPath.replace(/^\//, '') === 'debug') {
     return res.json({
       source: 'vercel-proxy',
       env_keys: Object.keys(process.env).sort(),
