@@ -16,24 +16,17 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   const incomingPath = req.url || '/';
   const pathname = incomingPath.split('?')[0];
 
-  if (pathname === '/debug' || pathname === 'debug') {
-    return res.json({
-      source: 'vercel-proxy',
-      raw_url: req.url,
-      pathname,
-      incomingPath,
-      env_keys: Object.keys(process.env).sort(),
-      values: {
-        VITE_API_URL: process.env.VITE_API_URL || 'NOT SET',
-        VITE_BLAXEL_WORKSPACE: process.env.VITE_BLAXEL_WORKSPACE ? `SET (${process.env.VITE_BLAXEL_WORKSPACE.length} chars)` : 'NOT SET',
-        VITE_BLAXEL_API_KEY: process.env.VITE_BLAXEL_API_KEY ? `SET (${process.env.VITE_BLAXEL_API_KEY.length} chars)` : 'NOT SET',
-        JWT_SECRET_KEY: process.env.JWT_SECRET_KEY ? `SET (${process.env.JWT_SECRET_KEY.length} chars)` : 'NOT SET',
-        FRONTEND_URL: process.env.FRONTEND_URL || 'NOT SET',
-        DATABASE_URL: process.env.DATABASE_URL ? 'SET' : 'NOT SET',
-        DEEPINFRA_API_TOKEN: process.env.DEEPINFRA_API_TOKEN ? 'SET' : 'NOT SET',
-      },
-    });
-  }
+  return res.json({
+    raw_url: req.url,
+    pathname,
+    env_keys: Object.keys(process.env).sort(),
+    values: {
+      VITE_API_URL: process.env.VITE_API_URL || 'NOT SET',
+      VITE_BLAXEL_WORKSPACE: process.env.VITE_BLAXEL_WORKSPACE ? `SET (${process.env.VITE_BLAXEL_WORKSPACE.length} chars)` : 'NOT SET',
+      VITE_BLAXEL_API_KEY: process.env.VITE_BLAXEL_API_KEY ? `SET (${process.env.VITE_BLAXEL_API_KEY.length} chars)` : 'NOT SET',
+      JWT_SECRET_KEY: process.env.JWT_SECRET_KEY ? `SET (${process.env.JWT_SECRET_KEY.length} chars)` : 'NOT SET',
+    },
+  });
 
   const stripped = pathname.replace(/^\/api\/?/, '');
   const targetPath = `${backendUrl}/${stripped}`;
