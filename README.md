@@ -40,7 +40,7 @@ _Application Registry with Detailed Match Insights_
 
 ### Prerequisites
 
-- Python 3.10+, Node.js 18+, Rust
+- Python 3.10+, Node.js 18+
 - Tesseract OCR & Poppler (for PDF parsing)
 - A [Blaxel.ai](https://blaxel.ai) account (for backend hosting)
 - A [Vercel](https://vercel.com) account (for frontend hosting)
@@ -90,8 +90,7 @@ cp .env.example .env
 
 ### 3. Database Setup
 
-- **Local SQLite:** Run `cd resume_cli && cargo run -- init`.
-- **Neon PostgreSQL:** Update `DATABASE_URL` in `.env` and run migrations from `docs/migrations/`.
+- **Neon PostgreSQL:** Set `DATABASE_URL` in `.env` and run migrations from `docs/migrations/`.
 
 ### 4. Local Development
 
