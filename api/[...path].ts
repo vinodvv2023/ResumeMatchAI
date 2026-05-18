@@ -19,6 +19,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (pathname === '/debug' || pathname === 'debug') {
     return res.json({
       source: 'vercel-proxy',
+      raw_url: req.url,
+      pathname,
+      incomingPath,
       env_keys: Object.keys(process.env).sort(),
       values: {
         VITE_API_URL: process.env.VITE_API_URL || 'NOT SET',
