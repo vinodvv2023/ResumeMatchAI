@@ -14,9 +14,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   const ak = process.env.VITE_BLAXEL_API_KEY || '';
 
   const incomingPath = req.url || '/';
-  const cleanPath = incomingPath.replace(/^\/api\/?/, '');
+  const pathname = incomingPath.split('?')[0];
 
-  if (cleanPath.replace(/^\//, '') === 'debug') {
+  if (pathname === '/debug' || pathname === 'debug') {
     return res.json({
       source: 'vercel-proxy',
       env_keys: Object.keys(process.env).sort(),
@@ -32,7 +32,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     });
   }
 
-  const stripped = cleanPath;
+  const stripped = pathname.replace(/^\/api\/?/, '');
   const targetPath = `${backendUrl}/${stripped}`;
 
   const parsedUrl = new URL(targetPath);
