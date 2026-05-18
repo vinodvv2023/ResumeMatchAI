@@ -14,7 +14,25 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   const ak = process.env.VITE_BLAXEL_API_KEY || '';
 
   const incomingPath = req.url || '/';
-  const stripped = incomingPath.replace(/^\/api\/?/, '');
+  const cleanPath = incomingPath.replace(/^\/api\/?/, '');
+
+  if (cleanPath === 'debug') {
+    return res.json({
+      source: 'vercel-proxy',
+      env_keys: Object.keys(process.env).sort(),
+      values: {
+        VITE_API_URL: process.env.VITE_API_URL || 'NOT SET',
+        VITE_BLAXEL_WORKSPACE: process.env.VITE_BLAXEL_WORKSPACE ? `SET (${process.env.VITE_BLAXEL_WORKSPACE.length} chars)` : 'NOT SET',
+        VITE_BLAXEL_API_KEY: process.env.VITE_BLAXEL_API_KEY ? `SET (${process.env.VITE_BLAXEL_API_KEY.length} chars)` : 'NOT SET',
+        JWT_SECRET_KEY: process.env.JWT_SECRET_KEY ? `SET (${process.env.JWT_SECRET_KEY.length} chars)` : 'NOT SET',
+        FRONTEND_URL: process.env.FRONTEND_URL || 'NOT SET',
+        DATABASE_URL: process.env.DATABASE_URL ? 'SET' : 'NOT SET',
+        DEEPINFRA_API_TOKEN: process.env.DEEPINFRA_API_TOKEN ? 'SET' : 'NOT SET',
+      },
+    });
+  }
+
+  const stripped = cleanPath;
   const targetPath = `${backendUrl}/${stripped}`;
 
   const parsedUrl = new URL(targetPath);
@@ -38,7 +56,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     fwdHeaders['x-blaxel-workspace'] = ws;
   }
 
-  console.log(`[PROXY] ak=${ak ? 'SET' : 'MISSING'} ws=${ws ? 'SET' : 'MISSING'} xfwd=${fwdHeaders['x-forwarded-authorization'] ? 'SET' : 'MISSING'} blauth=${fwdHeaders['x-blaxel-authorization'] ? 'SET' : 'MISSING'}`);
+  console.log(`[PROXY] ak=${ak ? 'SET' : 'MISSING'} ws=${ws ? 'SET' : 'MISSING'} auth=${authValue ? 'SET' : 'MISSING'} xfwd=${fwdHeaders['x-forwarded-authorization'] ? 'SET' : 'MISSING'} blauth=${fwdHeaders['x-blaxel-authorization'] ? 'SET' : 'MISSING'}`);
 
   const proxyReq = httpModule.request({
     hostname: parsedUrl.hostname,
@@ -47,7 +65,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     method: req.method || 'GET',
     headers: fwdHeaders,
   }, (proxyRes) => {
-    res.setHeader('x-proxy-debug', `ak=${ak?'Y':'N'} ws=${ws?'Y':'N'} url=${backendUrl}`);
+    res.setHeader('x-proxy-debug', `ak=${ak?'Y':'N'} ws=${ws?'Y':'N'} auth=${authValue?'Y':'N'} xfwd=${fwdHeaders['x-forwarded-authorization']?'Y':'N'}`);
     res.status(proxyRes.statusCode || 502);
     for (const [key, value] of Object.entries(proxyRes.headers)) {
       if (typeof value === 'string') {
